@@ -1,0 +1,241 @@
+{% extends "layout.html" %}
+
+{% block title %}Account Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Account Report</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Reports
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Selection -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Select Customer</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET">
+            <div class="row">
+                <div class="col-md-8">
+                    <select class="form-select" name="customer" id="customer_select" onchange="updatePhone()">
+                        <option value="">Select a customer</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.name }}" 
+                                data-phone="{{ customer.phone }}"
+                                {% if request.args.get('customer') == customer.name %}selected{% endif %}>
+                            {{ customer.name }} - {{ customer.phone }}
+                            {% if customer.company %}({{ customer.company }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="phone" id="phone_input" value="{{ request.args.get('phone', '') }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Generate Report
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if account_data %}
+<!-- Account Summary -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Account Summary - {{ account_data.customer_name }}</h5>
+                <a href="{{ url_for('reports.export_account_pdf', customer=account_data.customer_name, phone=account_data.customer_phone) }}" 
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Customer:</strong> {{ account_data.customer_name }}<br>
+                        <strong>Phone:</strong> {{ account_data.customer_phone }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Report Date:</strong> {{ moment().format('YYYY-MM-DD') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Outstanding Balance</h5>
+            </div>
+            <div class="card-body text-center">
+                <h3 class="{% if account_data.balance > 0 %}text-danger{% elif account_data.balance < 0 %}text-success{% else %}text-muted{% endif %}">
+                    ${{ "%.2f"|format(account_data.balance) }}
+                </h3>
+                <small class="text-muted">
+                    {% if account_data.balance > 0 %}
+                    Amount Due
+                    {% elif account_data.balance < 0 %}
+                    Credit Balance
+                    {% else %}
+                    Fully Paid
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-success">${{ "%.2f"|format(account_data.total_sales) }}</h5>
+                <small class="text-muted">Total Sales</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-warning">${{ "%.2f"|format(account_data.total_refunds) }}</h5>
+                <small class="text-muted">Total Refunds</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-info">${{ "%.2f"|format(account_data.total_payments) }}</h5>
+                <small class="text-muted">Total Payments</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-primary">${{ "%.2f"|format(account_data.total_advances) }}</h5>
+                <small class="text-muted">Total Advances</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales History -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Sales History</h5>
+    </div>
+    <div class="card-body">
+        {% if account_data.sales %}
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Sale ID</th>
+                        <th>Date</th>
+                        <th>Stock ID</th>
+                        <th>Quantity</th>
+                        <th>Rate</th>
+                        <th>Total</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in account_data.sales %}
+                    <tr>
+                        <td>{{ sale.sale_id }}</td>
+                        <td>{{ sale.date[:10] if sale.date else 'N/A' }}</td>
+                        <td>{{ sale.stock_id }}</td>
+                        <td>{{ sale.quantity }}</td>
+                        <td>${{ "%.2f"|format(sale.rate) }}</td>
+                        <td>${{ "%.2f"|format(sale.total) }}</td>
+                        <td>
+                            {% if sale.is_refund %}
+                            <span class="badge bg-warning">Refund</span>
+                            {% else %}
+                            <span class="badge bg-success">Sale</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No sales found for this customer.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Transaction History -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Transaction History</h5>
+    </div>
+    <div class="card-body">
+        {% if account_data.transactions %}
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Note</th>
+                        <th>Related Sale</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in account_data.transactions %}
+                    <tr>
+                        <td>{{ transaction.date[:10] if transaction.date else 'N/A' }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if transaction.type == 'payment' %}bg-success
+                                {% elif transaction.type == 'advance' %}bg-info
+                                {% elif transaction.type == 'refund' %}bg-warning
+                                {% else %}bg-secondary{% endif %}">
+                                {{ transaction.type.title() }}
+                            </span>
+                        </td>
+                        <td>${{ "%.2f"|format(transaction.amount) }}</td>
+                        <td>{{ transaction.note or '-' }}</td>
+                        <td>{{ transaction.related_sale_id or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No transactions found for this customer.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updatePhone() {
+    const select = document.getElementById('customer_select');
+    const phoneInput = document.getElementById('phone_input');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption.value) {
+        phoneInput.value = selectedOption.dataset.phone;
+    } else {
+        phoneInput.value = '';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends "layout.html" %}
+
+{% block title %}Customer Details - {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Customer Details</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('customer.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Customers
+            </a>
+            <a href="{{ url_for('sale.add') }}?customer={{ customer.name }}&phone={{ customer.phone }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Sale
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Info Card -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Customer Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Name:</strong> {{ customer.name }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Phone:</strong> {{ customer.phone }}
+                    </div>
+                </div>
+                {% if customer.company %}
+                <div class="row mt-2">
+                    <div class="col-md-12">
+                        <strong>Company:</strong> {{ customer.company }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Account Balance</h5>
+            </div>
+            <div class="card-body text-center">
+                <h3 class="{% if balance > 0 %}text-danger{% elif balance < 0 %}text-success{% else %}text-muted{% endif %}">
+                    ${{ "%.2f"|format(balance) }}
+                </h3>
+                <small class="text-muted">
+                    {% if balance > 0 %}
+                    Customer owes
+                    {% elif balance < 0 %}
+                    Credit balance
+                    {% else %}
+                    Settled
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales History -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Sales History</h5>
+            </div>
+            <div class="card-body">
+                {% if sales %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Sale ID</th>
+                                <th>Date</th>
+                                <th>Items</th>
+                                <th>Quantity</th>
+                                <th>Rate</th>
+                                <th>Total</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sale in sales %}
+                            <tr>
+                                <td>{{ sale.sale_id }}</td>
+                                <td>{{ sale.date[:10] if sale.date else 'N/A' }}</td>
+                                <td>Stock ID: {{ sale.stock_id }}</td>
+                                <td>{{ sale.quantity }}</td>
+                                <td>${{ "%.2f"|format(sale.rate) }}</td>
+                                <td>${{ "%.2f"|format(sale.total) }}</td>
+                                <td>
+                                    {% if sale.is_refund %}
+                                    <span class="badge bg-warning">Refund</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Sale</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No sales found for this customer.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Transaction History</h5>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Note</th>
+                                <th>Related Sale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.date[:10] if transaction.date else 'N/A' }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if transaction.type == 'payment' %}bg-success
+                                        {% elif transaction.type == 'advance' %}bg-info
+                                        {% elif transaction.type == 'refund' %}bg-warning
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ transaction.type.title() }}
+                                    </span>
+                                </td>
+                                <td>${{ "%.2f"|format(transaction.amount) }}</td>
+                                <td>{{ transaction.note or '-' }}</td>
+                                <td>{{ transaction.related_sale_id or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No transactions found for this customer.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

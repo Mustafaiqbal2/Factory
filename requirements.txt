@@ -1,0 +1,7 @@
+Flask
+supabase
+python-dotenv
+reportlab
+Werkzeug
+Jinja2
+gunicorn

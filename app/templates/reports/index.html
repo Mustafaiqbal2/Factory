@@ -1,0 +1,112 @@
+{% extends "layout.html" %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Reports</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-lines-fill"></i> Account Reports
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">View individual customer account statements, balances, and transaction history.</p>
+                <a href="{{ url_for('reports.account_report') }}" class="btn btn-primary">
+                    View Account Reports
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-box"></i> Sales by Stock
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Analyze sales performance by stock items, quantities sold, and revenue generated.</p>
+                <a href="{{ url_for('reports.sales_by_stock') }}" class="btn btn-primary">
+                    View Stock Reports
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-people"></i> Sales by Customer
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Review customer purchase patterns, total sales, and customer performance metrics.</p>
+                <a href="{{ url_for('reports.sales_by_customer') }}" class="btn btn-primary">
+                    View Customer Reports
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> Profit Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Analyze profit margins, revenue vs costs, and profitability by stock items.</p>
+                <a href="{{ url_for('reports.profit_report') }}" class="btn btn-primary">
+                    View Profit Reports
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats Overview -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Quick Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-primary">Reports</h4>
+                            <p class="text-muted">Generate comprehensive business reports for better decision making.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-success">Export</h4>
+                            <p class="text-muted">Download reports as PDF for sharing and record keeping.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-info">Analytics</h4>
+                            <p class="text-muted">Gain insights into sales performance and customer behavior.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-warning">Real-time</h4>
+                        <p class="text-muted">All reports show real-time data from your active database.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

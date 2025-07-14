@@ -1,0 +1,167 @@
+{% extends "layout.html" %}
+
+{% block title %}Edit Stock Item{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Edit Stock Item</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('stock.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Stock
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pencil"></i> Stock Item Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="stockForm">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="name" class="form-label">Item Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ stock_item.name }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="size" class="form-label">Size</label>
+                            <input type="text" class="form-control" id="size" name="size" 
+                                   value="{{ stock_item.size or '' }}" placeholder="e.g., XL, 42, Large">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="color" class="form-label">Color</label>
+                            <input type="text" class="form-control" id="color" name="color" 
+                                   value="{{ stock_item.color or '' }}" placeholder="e.g., Red, Blue, Black">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="quantity" class="form-label">Quantity *</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" 
+                                   value="{{ stock_item.quantity }}" min="0" step="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="unit_rate" class="form-label">Rate per Unit *</label>
+                            <div class="input-group">
+                                <span class="input-group-text currency"></span>
+                                <input type="number" class="form-control" id="unit_rate" name="unit_rate" 
+                                       value="{{ (stock_item.total_value / stock_item.quantity) if stock_item.quantity > 0 else 0 }}" 
+                                       step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="total_value" class="form-label">Total Value</label>
+                            <div class="input-group">
+                                <span class="input-group-text currency"></span>
+                                <input type="number" class="form-control" id="total_value" name="total_value" 
+                                       value="{{ stock_item.total_value }}" step="0.01" min="0" readonly>
+                            </div>
+                            <small class="form-text text-muted">Automatically calculated</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Calculation:</strong> 
+                            <span id="calculation_display">Quantity × Rate per Unit = Total Value</span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="{{ url_for('stock.index') }}" class="btn btn-secondary me-md-2">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Update Stock Item
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('quantity');
+    const unitRateInput = document.getElementById('unit_rate');
+    const totalValueInput = document.getElementById('total_value');
+    const calculationDisplay = document.getElementById('calculation_display');
+
+    function updateTotalValue() {
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const unitRate = parseFloat(unitRateInput.value) || 0;
+        const totalValue = quantity * unitRate;
+        
+        totalValueInput.value = totalValue.toFixed(2);
+        
+        // Update calculation display
+        if (quantity > 0 && unitRate > 0) {
+            calculationDisplay.innerHTML = `${quantity} × ₦${unitRate.toFixed(2)} = <strong>₦${totalValue.toFixed(2)}</strong>`;
+        } else {
+            calculationDisplay.innerHTML = 'Quantity × Rate per Unit = Total Value';
+        }
+    }
+
+    // Add event listeners for real-time calculation
+    quantityInput.addEventListener('input', updateTotalValue);
+    unitRateInput.addEventListener('input', updateTotalValue);
+    
+    // Validate inputs
+    quantityInput.addEventListener('change', function() {
+        if (this.value < 0) {
+            this.value = 0;
+            updateTotalValue();
+        }
+    });
+    
+    unitRateInput.addEventListener('change', function() {
+        if (this.value < 0) {
+            this.value = 0;
+            updateTotalValue();
+        }
+    });
+
+    // Initial calculation
+    updateTotalValue();
+
+    // Form validation
+    document.getElementById('stockForm').addEventListener('submit', function(e) {
+        const quantity = parseFloat(quantityInput.value);
+        const unitRate = parseFloat(unitRateInput.value);
+        
+        if (quantity <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid quantity greater than 0.');
+            quantityInput.focus();
+            return false;
+        }
+        
+        if (unitRate <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid rate greater than 0.');
+            unitRateInput.focus();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

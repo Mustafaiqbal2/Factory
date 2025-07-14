@@ -1,0 +1,212 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('sale.add') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">New Sale</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-warning" role="alert">
+    <i class="bi bi-exclamation-triangle"></i>
+    Database connection error: {{ error }}
+    <br><small>Please check your Supabase configuration in the .env file.</small>
+</div>
+{% endif %}
+
+<!-- Statistics Cards -->
+<div class="row mb-4 g-3">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stats-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="text-uppercase fw-bold mb-1" style="font-size: 0.85rem;">
+                        Total Stock Items
+                    </div>
+                    <div class="h3 mb-0 fw-bold">
+                        {{ stats.stock_count }}
+                    </div>
+                </div>
+                <div class="stats-icon">
+                    <i class="bi bi-box"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card stats-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="text-uppercase fw-bold mb-1" style="font-size: 0.85rem;">
+                        Total Customers
+                    </div>
+                    <div class="h3 mb-0 fw-bold">
+                        {{ stats.customer_count }}
+                    </div>
+                </div>
+                <div class="stats-icon">
+                    <i class="bi bi-people"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card stats-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="text-uppercase fw-bold mb-1" style="font-size: 0.85rem;">
+                        Inventory Value
+                    </div>
+                    <div class="h3 mb-0 fw-bold">
+                        <span class="currency">{{ "%.2f"|format(stats.total_inventory_value) }}</span>
+                    </div>
+                </div>
+                <div class="stats-icon">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card stats-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="text-uppercase fw-bold mb-1" style="font-size: 0.85rem;">
+                        Low Stock Items
+                    </div>
+                    <div class="h3 mb-0 fw-bold">
+                        {{ stats.low_stock|length }}
+                    </div>
+                </div>
+                <div class="stats-icon">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Recent Sales -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-clock-history"></i> Recent Sales
+                </h6>
+                <a href="{{ url_for('sale.index') }}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if stats.recent_sales %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-center">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sale in stats.recent_sales %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ sale.customer_name }}</div>
+                                    <small class="text-muted">{{ sale.customer_phone }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="currency fw-semibold">{{ "%.2f"|format(sale.total) }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <small>{{ sale.date[:10] if sale.date else 'N/A' }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-cart-x display-6 text-muted"></i>
+                    <p class="text-muted mt-2 mb-0">No recent sales found.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Alert -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-warning">
+                    <i class="bi bi-exclamation-triangle"></i> Low Stock Alert
+                </h6>
+                <a href="{{ url_for('stock.index') }}" class="btn btn-sm btn-outline-warning">
+                    Manage Stock
+                </a>
+            </div>
+            <div class="card-body">
+                {% if stats.low_stock %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Quantity</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in stats.low_stock %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ item.name }}</div>
+                                    {% if item.size or item.color %}
+                                    <small class="text-muted">
+                                        {% if item.size %}{{ item.size }}{% endif %}
+                                        {% if item.size and item.color %} - {% endif %}
+                                        {% if item.color %}{{ item.color }}{% endif %}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning text-dark">{{ item.quantity }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <a href="{{ url_for('stock.edit', id=item.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-check-circle display-6 text-success"></i>
+                    <p class="text-muted mt-2 mb-0">All items are well stocked!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
