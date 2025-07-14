@@ -18,9 +18,9 @@ def index():
         # Get low stock items (quantity <= 5)
         low_stock = supabase.table('stock').select('*').filter('quantity', 'lte', 5).execute().data
         
-        # Calculate total inventory value
+        # Calculate total inventory value using new schema
         stock_items = supabase.table('stock').select('*').execute().data
-        total_inventory_value = sum(item['total_value'] for item in stock_items)
+        total_inventory_value = sum(item.get('total_cost', 0) for item in stock_items)
         
         stats = {
             'stock_count': stock_count,

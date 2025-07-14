@@ -65,16 +65,16 @@ def sales_by_stock():
         sales = supabase.table('sale').select('*').execute().data
         stock_items = supabase.table('stock').select('*').execute().data
         
-        # Create stock lookup
-        stock_lookup = {item['id']: item for item in stock_items}
+        # Create stock lookup using size and color as key
+        stock_lookup = {f"{item['size']}_{item['color']}": item for item in stock_items}
         
         # Group sales by stock
         stock_sales = {}
         for sale in sales:
-            stock_id = sale['stock_id']
-            if stock_id not in stock_sales:
-                stock_sales[stock_id] = {
-                    'stock_item': stock_lookup.get(stock_id, {'name': 'Unknown', 'size': '', 'color': ''}),
+            stock_key = f"{sale['stock_size']}_{sale['stock_color']}"
+            if stock_key not in stock_sales:
+                stock_sales[stock_key] = {
+                    'stock_item': stock_lookup.get(stock_key, {'size': sale['stock_size'], 'color': sale['stock_color']}),
                     'total_quantity_sold': 0,
                     'total_quantity_refunded': 0,
                     'total_sales_amount': 0,
@@ -84,13 +84,13 @@ def sales_by_stock():
                 }
             
             if sale['is_refund']:
-                stock_sales[stock_id]['total_quantity_refunded'] += sale['quantity']
-                stock_sales[stock_id]['total_refund_amount'] += sale['total']
-                stock_sales[stock_id]['refund_count'] += 1
+                stock_sales[stock_key]['total_quantity_refunded'] += sale['quantity']
+                stock_sales[stock_key]['total_refund_amount'] += sale['total']
+                stock_sales[stock_key]['refund_count'] += 1
             else:
-                stock_sales[stock_id]['total_quantity_sold'] += sale['quantity']
-                stock_sales[stock_id]['total_sales_amount'] += sale['total']
-                stock_sales[stock_id]['sales_count'] += 1
+                stock_sales[stock_key]['total_quantity_sold'] += sale['quantity']
+                stock_sales[stock_key]['total_sales_amount'] += sale['total']
+                stock_sales[stock_key]['sales_count'] += 1
         
         return render_template('reports/sales_by_stock.html', stock_sales=stock_sales)
     except Exception as e:
@@ -140,39 +140,30 @@ def profit_report():
     try:
         supabase = get_db()
         
-        # Get all sales and stock data
+        # Get all sales
         sales = supabase.table('sale').select('*').execute().data
-        stock_items = supabase.table('stock').select('*').execute().data
-        
-        # Create stock lookup
-        stock_lookup = {item['id']: item for item in stock_items}
         
         total_profit = 0
         profit_by_stock = {}
         
         for sale in sales:
-            stock_id = sale['stock_id']
-            stock_item = stock_lookup.get(stock_id)
+            stock_key = f"{sale['stock_size']}_{sale['stock_color']}"
+            profit = sale.get('profit', 0)  # Use the profit field from the sale record
             
-            if stock_item and stock_item['quantity'] > 0:
-                cost_per_unit = stock_item['total_value'] / (stock_item['quantity'] + sum(s['quantity'] for s in sales if s['stock_id'] == stock_id and not s['is_refund']))
-                cost = cost_per_unit * sale['quantity']
-                profit = sale['total'] - cost
-                
-                if sale['is_refund']:
-                    profit = -profit  # Negative profit for refunds
-                
-                total_profit += profit
-                
-                if stock_id not in profit_by_stock:
-                    profit_by_stock[stock_id] = {
-                        'stock_item': stock_item,
-                        'total_profit': 0,
-                        'sales_count': 0
-                    }
-                
-                profit_by_stock[stock_id]['total_profit'] += profit
-                profit_by_stock[stock_id]['sales_count'] += 1
+            if sale['is_refund']:
+                profit = -profit  # Negative profit for refunds
+            
+            total_profit += profit
+            
+            if stock_key not in profit_by_stock:
+                profit_by_stock[stock_key] = {
+                    'stock_item': {'size': sale['stock_size'], 'color': sale['stock_color']},
+                    'total_profit': 0,
+                    'sales_count': 0
+                }
+            
+            profit_by_stock[stock_key]['total_profit'] += profit
+            profit_by_stock[stock_key]['sales_count'] += 1
         
         return render_template('reports/profit.html', 
                              total_profit=total_profit, 
@@ -228,10 +219,10 @@ def export_account_pdf():
         # Summary table
         summary_data = [
             ['Summary', 'Amount'],
-            ['Total Sales', f'${total_sales:.2f}'],
-            ['Total Refunds', f'${total_refunds:.2f}'],
-            ['Total Payments', f'${total_payments:.2f}'],
-            ['Outstanding Balance', f'${balance:.2f}']
+            ['Total Sales', f'₦{total_sales:.2f}'],
+            ['Total Refunds', f'₦{total_refunds:.2f}'],
+            ['Total Payments', f'₦{total_payments:.2f}'],
+            ['Outstanding Balance', f'₦{balance:.2f}']
         ]
         
         summary_table = Table(summary_data, colWidths=[3*inch, 2*inch])
@@ -252,14 +243,15 @@ def export_account_pdf():
         # Sales table
         if sales:
             story.append(Paragraph("Sales History", styles['Heading2']))
-            sales_data = [['Date', 'Type', 'Quantity', 'Rate', 'Total']]
+            sales_data = [['Date', 'Type', 'Size/Color', 'Quantity', 'Rate', 'Total']]
             for sale in sales:
                 sales_data.append([
                     sale['date'][:10] if sale['date'] else 'N/A',
                     'Refund' if sale['is_refund'] else 'Sale',
+                    f"{sale['stock_size']}/{sale['stock_color']}",
                     str(sale['quantity']),
-                    f"${sale['rate']:.2f}",
-                    f"${sale['total']:.2f}"
+                    f"₦{sale['rate']:.2f}",
+                    f"₦{sale['total']:.2f}"
                 ])
             
             sales_table = Table(sales_data)

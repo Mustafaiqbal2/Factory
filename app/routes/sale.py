@@ -8,8 +8,35 @@ sale_bp = Blueprint('sale', __name__)
 def index():
     try:
         supabase = get_db()
-        sales = supabase.table('sale').select('*').order('date', desc=True).execute().data
-        return render_template('sale/index.html', sales=sales)
+        
+        # Get search parameters
+        search_customer = request.args.get('search_customer', '').strip()
+        start_date = request.args.get('start_date', '').strip()
+        end_date = request.args.get('end_date', '').strip()
+        
+        # Start with base query
+        query = supabase.table('sale').select('*')
+        
+        # Apply filters
+        if search_customer:
+            query = query.ilike('customer_name', f'%{search_customer}%')
+        
+        if start_date:
+            query = query.gte('date', start_date)
+        
+        if end_date:
+            # Add one day to end_date to include the full day
+            end_date_plus_one = datetime.strptime(end_date, '%Y-%m-%d')
+            end_date_plus_one = end_date_plus_one.replace(hour=23, minute=59, second=59)
+            query = query.lte('date', end_date_plus_one.isoformat())
+        
+        # Execute query with ordering
+        sales = query.order('date', desc=True).execute().data
+        
+        return render_template('sale/index.html', sales=sales, 
+                             search_customer=search_customer, 
+                             start_date=start_date, 
+                             end_date=end_date)
     except Exception as e:
         flash(f'Error loading sales: {str(e)}', 'error')
         return render_template('sale/index.html', sales=[])
@@ -23,7 +50,8 @@ def add():
             # Get form data
             customer_name = request.form['customer_name']
             customer_phone = request.form['customer_phone']
-            stock_id = int(request.form['stock_id'])
+            stock_size = request.form['stock_size']
+            stock_color = request.form['stock_color']
             quantity = int(request.form['quantity'])
             rate = float(request.form['rate'])
             total = quantity * rate
@@ -35,7 +63,7 @@ def add():
                 return redirect(url_for('sale.add'))
             
             # Check stock availability
-            stock_item = supabase.table('stock').select('*').eq('id', stock_id).execute().data
+            stock_item = supabase.table('stock').select('*').eq('size', stock_size).eq('color', stock_color).execute().data
             if not stock_item:
                 flash('Stock item not found.', 'error')
                 return redirect(url_for('sale.add'))
@@ -44,14 +72,23 @@ def add():
                 flash(f'Insufficient stock. Available: {stock_item[0]["quantity"]}', 'error')
                 return redirect(url_for('sale.add'))
             
+            # Calculate cost and profit
+            cost_per_unit = stock_item[0]['cost_per_unit']
+            total_cost = cost_per_unit * quantity
+            profit = total - total_cost
+            
             # Create sale
             sale_data = {
                 'customer_name': customer_name,
                 'customer_phone': customer_phone,
-                'stock_id': stock_id,
+                'stock_size': stock_size,
+                'stock_color': stock_color,
                 'quantity': quantity,
                 'rate': rate,
                 'total': total,
+                'cost_per_unit': cost_per_unit,
+                'total_cost': total_cost,
+                'profit': profit,
                 'date': datetime.now().isoformat(),
                 'is_refund': False
             }
@@ -59,9 +96,13 @@ def add():
             sale_result = supabase.table('sale').insert(sale_data).execute()
             sale_id = sale_result.data[0]['sale_id']
             
-            # Update stock quantity
+            # Update stock quantity and total cost
             new_quantity = stock_item[0]['quantity'] - quantity
-            supabase.table('stock').update({'quantity': new_quantity}).eq('id', stock_id).execute()
+            new_total_cost = stock_item[0]['total_cost'] - total_cost
+            supabase.table('stock').update({
+                'quantity': new_quantity,
+                'total_cost': new_total_cost
+            }).eq('size', stock_size).eq('color', stock_color).execute()
             
             # Create transaction record
             transaction_data = {
@@ -71,7 +112,7 @@ def add():
                 'type': 'sale',
                 'related_sale_id': sale_id,
                 'date': datetime.now().isoformat(),
-                'note': f'Sale of {quantity} units at ${rate} each'
+                'note': f'Sale of {quantity} units at ₦{rate} each'
             }
             
             supabase.table('transaction').insert(transaction_data).execute()
@@ -81,7 +122,7 @@ def add():
         
         # GET request - load data for form
         customers = supabase.table('customer').select('*').order('name').execute().data
-        stock_items = supabase.table('stock').select('*').filter('quantity', 'gt', 0).order('name').execute().data
+        stock_items = supabase.table('stock').select('*').filter('quantity', 'gt', 0).order('size').execute().data
         
         # Pre-fill customer if passed in query params
         selected_customer = request.args.get('customer')
@@ -110,10 +151,14 @@ def refund(sale_id):
         refund_data = {
             'customer_name': original_sale['customer_name'],
             'customer_phone': original_sale['customer_phone'],
-            'stock_id': original_sale['stock_id'],
+            'stock_size': original_sale['stock_size'],
+            'stock_color': original_sale['stock_color'],
             'quantity': original_sale['quantity'],
             'rate': original_sale['rate'],
             'total': original_sale['total'],
+            'cost_per_unit': original_sale['cost_per_unit'],
+            'total_cost': original_sale['total_cost'],
+            'profit': -original_sale['profit'],  # Negative profit for refund
             'date': datetime.now().isoformat(),
             'is_refund': True
         }
@@ -122,10 +167,14 @@ def refund(sale_id):
         refund_id = refund_result.data[0]['sale_id']
         
         # Update stock quantity (add back)
-        stock_item = supabase.table('stock').select('*').eq('id', original_sale['stock_id']).execute().data
+        stock_item = supabase.table('stock').select('*').eq('size', original_sale['stock_size']).eq('color', original_sale['stock_color']).execute().data
         if stock_item:
             new_quantity = stock_item[0]['quantity'] + original_sale['quantity']
-            supabase.table('stock').update({'quantity': new_quantity}).eq('id', original_sale['stock_id']).execute()
+            new_total_cost = stock_item[0]['total_cost'] + original_sale['total_cost']
+            supabase.table('stock').update({
+                'quantity': new_quantity,
+                'total_cost': new_total_cost
+            }).eq('size', original_sale['stock_size']).eq('color', original_sale['stock_color']).execute()
         
         # Create transaction record
         transaction_data = {
@@ -161,10 +210,14 @@ def delete(sale_id):
         
         # If it's a regular sale (not refund), restore stock
         if not sale_data['is_refund']:
-            stock_item = supabase.table('stock').select('*').eq('id', sale_data['stock_id']).execute().data
+            stock_item = supabase.table('stock').select('*').eq('size', sale_data['stock_size']).eq('color', sale_data['stock_color']).execute().data
             if stock_item:
                 new_quantity = stock_item[0]['quantity'] + sale_data['quantity']
-                supabase.table('stock').update({'quantity': new_quantity}).eq('id', sale_data['stock_id']).execute()
+                new_total_cost = stock_item[0]['total_cost'] + sale_data['total_cost']
+                supabase.table('stock').update({
+                    'quantity': new_quantity,
+                    'total_cost': new_total_cost
+                }).eq('size', sale_data['stock_size']).eq('color', sale_data['stock_color']).execute()
         
         # Delete related transactions
         supabase.table('transaction').delete().eq('related_sale_id', sale_id).execute()

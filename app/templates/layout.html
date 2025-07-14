@@ -54,6 +54,19 @@
             transform: translateY(-1px);
         }
 
+        .navbar-toggler {
+            border: none;
+            color: white;
+        }
+
+        .navbar-toggler:focus {
+            box-shadow: none;
+        }
+
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+
         .card {
             border-radius: var(--border-radius);
             box-shadow: var(--card-shadow);
@@ -83,13 +96,18 @@
         }
 
         .table th {
-            background: var(--primary-gradient);
-            color: white;
+            background-color: #f8f9fa;
+            color: #495057;
             border: none;
             font-weight: 600;
             text-transform: uppercase;
             font-size: 0.85rem;
             letter-spacing: 0.5px;
+        }
+
+        [data-bs-theme="dark"] .table th {
+            background-color: #404040;
+            color: #f8f9fa;
         }
 
         .table td {
@@ -118,23 +136,18 @@
         }
 
         .theme-toggle {
-            position: fixed;
-            top: 50%;
-            right: 1rem;
-            z-index: 1050;
-            background: var(--primary-gradient);
+            background: none;
             border: none;
-            border-radius: 50%;
-            width: 3rem;
-            height: 3rem;
-            color: white;
-            box-shadow: var(--card-shadow);
-            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
         }
 
         .theme-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+            background-color: rgba(255,255,255,0.1);
+            color: white;
         }
 
         .alert {
@@ -165,6 +178,25 @@
             font-weight: 500;
         }
 
+        /* Search bar styling */
+        .search-container {
+            position: relative;
+            max-width: 400px;
+        }
+
+        .search-container .form-control {
+            padding-left: 2.5rem;
+        }
+
+        .search-container .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            z-index: 10;
+        }
+
         /* Mobile Optimizations */
         @media (max-width: 768px) {
             .navbar-brand {
@@ -174,6 +206,10 @@
             .nav-link {
                 padding: 0.4rem 0.8rem !important;
                 font-size: 0.9rem;
+            }
+
+            .nav-link .nav-text {
+                display: inline !important;
             }
             
             .card-body {
@@ -187,12 +223,6 @@
             .btn {
                 padding: 0.5rem 1rem;
                 font-size: 0.9rem;
-            }
-            
-            .theme-toggle {
-                width: 2.5rem;
-                height: 2.5rem;
-                right: 0.5rem;
             }
             
             .stats-card .card-body {
@@ -274,11 +304,6 @@
     </style>
 </head>
 <body>
-    <!-- Theme Toggle Button -->
-    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
-        <i class="bi bi-moon-fill" id="themeIcon"></i>
-    </button>
-
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
@@ -289,30 +314,30 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.index') }}">
-                            <i class="bi bi-house"></i> <span class="d-lg-inline d-none">Dashboard</span>
+                            <i class="bi bi-house"></i> <span class="nav-text">Dashboard</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('stock.index') }}">
-                            <i class="bi bi-box"></i> <span class="d-lg-inline d-none">Stock</span>
+                            <i class="bi bi-box"></i> <span class="nav-text">Stock</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('customer.index') }}">
-                            <i class="bi bi-people"></i> <span class="d-lg-inline d-none">Customers</span>
+                            <i class="bi bi-people"></i> <span class="nav-text">Customers</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('sale.index') }}">
-                            <i class="bi bi-cart"></i> <span class="d-lg-inline d-none">Sales</span>
+                            <i class="bi bi-cart"></i> <span class="nav-text">Sales</span>
                         </a>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-graph-up"></i> <span class="d-lg-inline d-none">Reports</span>
+                            <i class="bi bi-graph-up"></i> <span class="nav-text">Reports</span>
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('reports.account_report') }}">Account Report</a></li>
@@ -322,6 +347,11 @@
                         </ul>
                     </li>
                 </ul>
+                <div class="d-flex">
+                    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
+                        <i class="bi bi-moon-fill" id="themeIcon"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
@@ -429,13 +459,39 @@
             });
         });
 
+        // Search functionality
+        function filterTable(searchInput, tableId) {
+            const filter = searchInput.value.toLowerCase();
+            const table = document.getElementById(tableId);
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+
+                for (let j = 0; j < cells.length; j++) {
+                    const cell = cells[j];
+                    if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                row.style.display = found ? '' : 'none';
+            }
+        }
+
         // Mobile menu auto-close
         document.addEventListener('click', function(e) {
             const navbar = document.querySelector('.navbar-collapse');
             const toggler = document.querySelector('.navbar-toggler');
             
-            if (navbar.classList.contains('show') && !navbar.contains(e.target) && !toggler.contains(e.target)) {
-                bootstrap.Collapse.getInstance(navbar).hide();
+            if (navbar && navbar.classList.contains('show') && !navbar.contains(e.target) && !toggler.contains(e.target)) {
+                const bsCollapse = bootstrap.Collapse.getInstance(navbar);
+                if (bsCollapse) {
+                    bsCollapse.hide();
+                }
             }
         });
 

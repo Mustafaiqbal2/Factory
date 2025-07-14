@@ -14,54 +14,58 @@
     </div>
 </div>
 
+<!-- Search Bar -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="search-container">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" class="form-control" id="stockSearch" placeholder="Search stock items..." onkeyup="filterTable(this, 'stockTable')">
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
         {% if stock_items %}
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table table-striped table-hover" id="stockTable">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Name</th>
                         <th>Size</th>
                         <th>Color</th>
                         <th>Quantity</th>
-                        <th>Total Value</th>
-                        <th>Unit Value</th>
+                        <th>Cost per Unit</th>
+                        <th>Total Cost</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in stock_items %}
                     <tr {% if item.quantity <= 5 %}class="table-warning"{% endif %}>
-                        <td>{{ item.id }}</td>
                         <td>
-                            <strong>{{ item.name }}</strong>
+                            <strong>{{ item.size }}</strong>
                             {% if item.quantity <= 5 %}
                             <span class="badge bg-warning text-dark ms-2">Low Stock</span>
                             {% endif %}
                         </td>
-                        <td>{{ item.size or '-' }}</td>
-                        <td>{{ item.color or '-' }}</td>
+                        <td>
+                            <span class="badge" style="background-color: {% if item.color.lower() == 'red' %}#dc3545{% elif item.color.lower() == 'blue' %}#0d6efd{% elif item.color.lower() == 'black' %}#000{% else %}#6c757d{% endif %}; color: white;">
+                                {{ item.color }}
+                            </span>
+                        </td>
                         <td>
                             <span class="badge {% if item.quantity <= 5 %}bg-warning text-dark{% elif item.quantity <= 10 %}bg-info{% else %}bg-success{% endif %}">
                                 {{ item.quantity }}
                             </span>
                         </td>
-                        <td>${{ "%.2f"|format(item.total_value) }}</td>
-                        <td>
-                            {% if item.quantity > 0 %}
-                            ${{ "%.2f"|format(item.total_value / item.quantity) }}
-                            {% else %}
-                            $0.00
-                            {% endif %}
-                        </td>
+                        <td><span class="currency">{{ "%.2f"|format(item.cost_per_unit) }}</span></td>
+                        <td><span class="currency">{{ "%.2f"|format(item.total_cost) }}</span></td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
-                                <a href="{{ url_for('stock.edit', id=item.id) }}" class="btn btn-outline-primary">
+                                <a href="{{ url_for('stock.edit', size=item.size, color=item.color) }}" class="btn btn-outline-primary">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <form method="POST" action="{{ url_for('stock.delete', id=item.id) }}" class="d-inline" 
+                                <form method="POST" action="{{ url_for('stock.delete', size=item.size, color=item.color) }}" class="d-inline" 
                                       onsubmit="return confirmDelete('Are you sure you want to delete this stock item?')">
                                     <button type="submit" class="btn btn-outline-danger">
                                         <i class="bi bi-trash"></i>
@@ -74,10 +78,10 @@
                 </tbody>
                 <tfoot>
                     <tr class="table-info">
-                        <th colspan="4">Total</th>
+                        <th colspan="2">Total</th>
                         <th>{{ stock_items|sum(attribute='quantity') }}</th>
-                        <th>${{ "%.2f"|format(stock_items|sum(attribute='total_value')) }}</th>
                         <th>-</th>
+                        <th><span class="currency">{{ "%.2f"|format(stock_items|sum(attribute='total_cost')) }}</span></th>
                         <th>-</th>
                     </tr>
                 </tfoot>

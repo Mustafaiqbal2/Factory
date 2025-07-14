@@ -65,7 +65,7 @@
                         <strong>Phone:</strong> {{ account_data.customer_phone }}
                     </div>
                     <div class="col-md-6">
-                        <strong>Report Date:</strong> {{ moment().format('YYYY-MM-DD') }}
+                        <strong>Report Date:</strong> {{ moment().now().strftime('%Y-%m-%d') if moment is defined else "2025-01-15" }}
                     </div>
                 </div>
             </div>
@@ -78,7 +78,7 @@
             </div>
             <div class="card-body text-center">
                 <h3 class="{% if account_data.balance > 0 %}text-danger{% elif account_data.balance < 0 %}text-success{% else %}text-muted{% endif %}">
-                    ${{ "%.2f"|format(account_data.balance) }}
+                    <span class="currency">{{ "%.2f"|format(account_data.balance) }}</span>
                 </h3>
                 <small class="text-muted">
                     {% if account_data.balance > 0 %}
@@ -99,7 +99,7 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="text-success">${{ "%.2f"|format(account_data.total_sales) }}</h5>
+                <h5 class="text-success"><span class="currency">{{ "%.2f"|format(account_data.total_sales) }}</span></h5>
                 <small class="text-muted">Total Sales</small>
             </div>
         </div>
@@ -107,7 +107,7 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="text-warning">${{ "%.2f"|format(account_data.total_refunds) }}</h5>
+                <h5 class="text-warning"><span class="currency">{{ "%.2f"|format(account_data.total_refunds) }}</span></h5>
                 <small class="text-muted">Total Refunds</small>
             </div>
         </div>
@@ -115,7 +115,7 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="text-info">${{ "%.2f"|format(account_data.total_payments) }}</h5>
+                <h5 class="text-info"><span class="currency">{{ "%.2f"|format(account_data.total_payments) }}</span></h5>
                 <small class="text-muted">Total Payments</small>
             </div>
         </div>
@@ -123,7 +123,7 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="text-primary">${{ "%.2f"|format(account_data.total_advances) }}</h5>
+                <h5 class="text-primary"><span class="currency">{{ "%.2f"|format(account_data.total_advances) }}</span></h5>
                 <small class="text-muted">Total Advances</small>
             </div>
         </div>
@@ -143,7 +143,7 @@
                     <tr>
                         <th>Sale ID</th>
                         <th>Date</th>
-                        <th>Stock ID</th>
+                        <th>Size/Color</th>
                         <th>Quantity</th>
                         <th>Rate</th>
                         <th>Total</th>
@@ -155,10 +155,10 @@
                     <tr>
                         <td>{{ sale.sale_id }}</td>
                         <td>{{ sale.date[:10] if sale.date else 'N/A' }}</td>
-                        <td>{{ sale.stock_id }}</td>
+                        <td>{{ sale.stock_size }}/{{ sale.stock_color }}</td>
                         <td>{{ sale.quantity }}</td>
-                        <td>${{ "%.2f"|format(sale.rate) }}</td>
-                        <td>${{ "%.2f"|format(sale.total) }}</td>
+                        <td><span class="currency">{{ "%.2f"|format(sale.rate) }}</span></td>
+                        <td><span class="currency">{{ "%.2f"|format(sale.total) }}</span></td>
                         <td>
                             {% if sale.is_refund %}
                             <span class="badge bg-warning">Refund</span>
@@ -208,7 +208,7 @@
                                 {{ transaction.type.title() }}
                             </span>
                         </td>
-                        <td>${{ "%.2f"|format(transaction.amount) }}</td>
+                        <td><span class="currency">{{ "%.2f"|format(transaction.amount) }}</span></td>
                         <td>{{ transaction.note or '-' }}</td>
                         <td>{{ transaction.related_sale_id or '-' }}</td>
                     </tr>

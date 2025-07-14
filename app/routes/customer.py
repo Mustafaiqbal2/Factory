@@ -7,11 +7,24 @@ customer_bp = Blueprint('customer', __name__)
 def index():
     try:
         supabase = get_db()
-        customers = supabase.table('customer').select('*').order('name').execute().data
-        return render_template('customer/index.html', customers=customers)
+        
+        # Get search parameter
+        search_query = request.args.get('search', '').strip()
+        
+        # Start with base query
+        query = supabase.table('customer').select('*')
+        
+        # Apply search filter if provided
+        if search_query:
+            query = query.or_(f'name.ilike.%{search_query}%,phone.ilike.%{search_query}%,company.ilike.%{search_query}%')
+        
+        # Execute query with ordering
+        customers = query.order('name').execute().data
+        
+        return render_template('customer/index.html', customers=customers, search_query=search_query)
     except Exception as e:
         flash(f'Error loading customers: {str(e)}', 'error')
-        return render_template('customer/index.html', customers=[])
+        return render_template('customer/index.html', customers=[], search_query='')
 
 @customer_bp.route('/add', methods=['GET', 'POST'])
 def add():

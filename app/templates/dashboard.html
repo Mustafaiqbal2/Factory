@@ -20,7 +20,7 @@
 <div class="alert alert-warning" role="alert">
     <i class="bi bi-exclamation-triangle"></i>
     Database connection error: {{ error }}
-    <br><small>Please check your Supabase configuration in the .env file.</small>
+    <br><small>Please check your Supabase configuration and database schema.</small>
 </div>
 {% endif %}
 
@@ -176,20 +176,14 @@
                             {% for item in stats.low_stock %}
                             <tr>
                                 <td>
-                                    <div class="fw-semibold">{{ item.name }}</div>
-                                    {% if item.size or item.color %}
-                                    <small class="text-muted">
-                                        {% if item.size %}{{ item.size }}{% endif %}
-                                        {% if item.size and item.color %} - {% endif %}
-                                        {% if item.color %}{{ item.color }}{% endif %}
-                                    </small>
-                                    {% endif %}
+                                    <div class="fw-semibold">{{ item.size }}</div>
+                                    <small class="text-muted">{{ item.color }}</small>
                                 </td>
                                 <td class="text-center">
                                     <span class="badge bg-warning text-dark">{{ item.quantity }}</span>
                                 </td>
                                 <td class="text-center">
-                                    <a href="{{ url_for('stock.edit', id=item.id) }}" 
+                                    <a href="{{ url_for('stock.edit', size=item.size, color=item.color) }}" 
                                        class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
                                     </a>

@@ -14,6 +14,44 @@
     </div>
 </div>
 
+<!-- Search Bar -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Search Sales</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" id="searchForm">
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="search_customer" class="form-label">Customer Name</label>
+                    <input type="text" class="form-control" id="search_customer" name="search_customer" 
+                           value="{{ search_customer or '' }}" placeholder="Search by customer name...">
+                </div>
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                           value="{{ start_date or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                           value="{{ end_date or '' }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <a href="{{ url_for('sale.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
         {% if sales %}
@@ -24,7 +62,7 @@
                         <th>Sale ID</th>
                         <th>Date</th>
                         <th>Customer</th>
-                        <th>Stock ID</th>
+                        <th>Size/Color</th>
                         <th>Quantity</th>
                         <th>Rate</th>
                         <th>Total</th>
@@ -41,11 +79,11 @@
                             <strong>{{ sale.customer_name }}</strong>
                             <br><small class="text-muted">{{ sale.customer_phone }}</small>
                         </td>
-                        <td>{{ sale.stock_id }}</td>
+                        <td>{{ sale.stock_size }}/{{ sale.stock_color }}</td>
                         <td>{{ sale.quantity }}</td>
-                        <td>${{ "%.2f"|format(sale.rate) }}</td>
+                        <td><span class="currency">{{ "%.2f"|format(sale.rate) }}</span></td>
                         <td>
-                            <strong>${{ "%.2f"|format(sale.total) }}</strong>
+                            <strong><span class="currency">{{ "%.2f"|format(sale.total) }}</span></strong>
                         </td>
                         <td>
                             {% if sale.is_refund %}
@@ -60,7 +98,7 @@
                                 <form method="POST" action="{{ url_for('sale.refund', sale_id=sale.sale_id) }}" class="d-inline" 
                                       onsubmit="return confirmDelete('Are you sure you want to process a refund for this sale?')">
                                     <button type="submit" class="btn btn-outline-warning">
-                                        <i class="bi bi-arrow-counterclockwise"></i> Refund
+                                        <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
                                 </form>
                                 {% endif %}
@@ -78,8 +116,8 @@
                 <tfoot>
                     <tr class="table-info">
                         <th colspan="6">Total Sales</th>
-                        <th>${{ "%.2f"|format(sales|selectattr('is_refund', 'false')|sum(attribute='total')) }}</th>
-                        <th colspan="2">Total Refunds: ${{ "%.2f"|format(sales|selectattr('is_refund', 'true')|sum(attribute='total')) }}</th>
+                        <th><span class="currency">{{ "%.2f"|format(sales|selectattr('is_refund', 'false')|sum(attribute='total')) }}</span></th>
+                        <th colspan="2">Total Refunds: <span class="currency">{{ "%.2f"|format(sales|selectattr('is_refund', 'true')|sum(attribute='total')) }}</span></th>
                     </tr>
                 </tfoot>
             </table>
@@ -87,8 +125,15 @@
         {% else %}
         <div class="text-center py-5">
             <i class="bi bi-cart display-1 text-muted"></i>
-            <h3 class="mt-3">No Sales</h3>
+            <h3 class="mt-3">No Sales Found</h3>
+            {% if search_customer or start_date or end_date %}
+            <p class="text-muted">No sales match your search criteria. Try adjusting your filters.</p>
+            <a href="{{ url_for('sale.index') }}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-x"></i> Clear Filters
+            </a>
+            {% else %}
             <p class="text-muted">Get started by recording your first sale.</p>
+            {% endif %}
             <a href="{{ url_for('sale.add') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> New Sale
             </a>

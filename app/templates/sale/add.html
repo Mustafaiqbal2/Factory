@@ -21,7 +21,7 @@
                 <h5 class="card-title mb-0">Sale Details</h5>
             </div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" id="saleForm">
                     <!-- Customer Selection -->
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -46,21 +46,24 @@
 
                     <!-- Stock Selection -->
                     <div class="row mb-3">
-                        <div class="col-md-12">
-                            <label for="stock_id" class="form-label">Stock Item *</label>
-                            <select class="form-select" id="stock_id" name="stock_id" required>
-                                <option value="">Select Stock Item</option>
+                        <div class="col-md-6">
+                            <label for="stock_size" class="form-label">Size *</label>
+                            <select class="form-select" id="stock_size" name="stock_size" required>
+                                <option value="">Select Size</option>
                                 {% for item in stock_items %}
-                                <option value="{{ item.id }}" 
+                                <option value="{{ item.size }}" 
+                                        data-color="{{ item.color }}"
                                         data-available="{{ item.quantity }}"
-                                        data-unit-value="{{ (item.total_value / item.quantity) if item.quantity > 0 else 0 }}">
-                                    {{ item.name }}
-                                    {% if item.size or item.color %}
-                                    ({% if item.size %}{{ item.size }}{% endif %}{% if item.size and item.color %} - {% endif %}{% if item.color %}{{ item.color }}{% endif %})
-                                    {% endif %}
-                                    - Available: {{ item.quantity }} - Unit Value: ${{ "%.2f"|format(item.total_value / item.quantity if item.quantity > 0 else 0) }}
+                                        data-cost="{{ item.cost_per_unit }}">
+                                    {{ item.size }}
                                 </option>
                                 {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="stock_color" class="form-label">Color *</label>
+                            <select class="form-select" id="stock_color" name="stock_color" required>
+                                <option value="">Select Color</option>
                             </select>
                         </div>
                     </div>
@@ -75,17 +78,18 @@
                         <div class="col-md-4">
                             <label for="rate" class="form-label">Rate per Unit *</label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text currency"></span>
                                 <input type="number" class="form-control" id="rate" name="rate" step="0.01" min="0" required>
                             </div>
-                            <small class="form-text text-muted">Suggested: $<span id="suggested_rate">0.00</span></small>
+                            <small class="form-text text-muted">Cost: <span class="currency" id="cost_price">0.00</span></small>
                         </div>
                         <div class="col-md-4">
                             <label for="total" class="form-label">Total Amount</label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text currency"></span>
                                 <input type="text" class="form-control" id="total" readonly>
                             </div>
+                            <small class="form-text text-muted">Profit: <span class="currency" id="profit_display">0.00</span></small>
                         </div>
                     </div>
 
@@ -107,12 +111,27 @@
 document.addEventListener('DOMContentLoaded', function() {
     const customerSelect = document.getElementById('customer_name');
     const customerPhone = document.getElementById('customer_phone');
-    const stockSelect = document.getElementById('stock_id');
+    const sizeSelect = document.getElementById('stock_size');
+    const colorSelect = document.getElementById('stock_color');
     const quantityInput = document.getElementById('quantity');
     const rateInput = document.getElementById('rate');
     const totalInput = document.getElementById('total');
     const availableSpan = document.getElementById('available_quantity');
-    const suggestedSpan = document.getElementById('suggested_rate');
+    const costSpan = document.getElementById('cost_price');
+    const profitSpan = document.getElementById('profit_display');
+
+    let stockData = {};
+
+    // Build stock data structure
+    {% for item in stock_items %}
+    if (!stockData['{{ item.size }}']) {
+        stockData['{{ item.size }}'] = {};
+    }
+    stockData['{{ item.size }}']['{{ item.color }}'] = {
+        quantity: {{ item.quantity }},
+        cost: {{ item.cost_per_unit }}
+    };
+    {% endfor %}
 
     // Handle customer selection
     customerSelect.addEventListener('change', function() {
@@ -124,27 +143,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Handle stock selection
-    stockSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        if (selectedOption.value) {
-            const available = selectedOption.dataset.available;
-            const unitValue = selectedOption.dataset.unitValue;
-            
-            availableSpan.textContent = available;
-            suggestedSpan.textContent = parseFloat(unitValue).toFixed(2);
-            rateInput.value = unitValue;
-            
-            // Set max quantity
-            quantityInput.max = available;
-            
+    // Handle size selection
+    sizeSelect.addEventListener('change', function() {
+        const selectedSize = this.value;
+        colorSelect.innerHTML = '<option value="">Select Color</option>';
+        
+        if (selectedSize && stockData[selectedSize]) {
+            Object.keys(stockData[selectedSize]).forEach(color => {
+                const option = document.createElement('option');
+                option.value = color;
+                option.textContent = color;
+                colorSelect.appendChild(option);
+            });
+        }
+        
+        resetQuantityAndRate();
+    });
+
+    // Handle color selection
+    colorSelect.addEventListener('change', function() {
+        const selectedSize = sizeSelect.value;
+        const selectedColor = this.value;
+        
+        if (selectedSize && selectedColor && stockData[selectedSize] && stockData[selectedSize][selectedColor]) {
+            const item = stockData[selectedSize][selectedColor];
+            availableSpan.textContent = item.quantity;
+            costSpan.textContent = item.cost.toFixed(2);
+            rateInput.value = (item.cost * 1.5).toFixed(2); // Suggest 50% markup
+            quantityInput.max = item.quantity;
             updateTotal();
         } else {
-            availableSpan.textContent = '0';
-            suggestedSpan.textContent = '0.00';
-            rateInput.value = '';
-            quantityInput.max = '';
-            totalInput.value = '';
+            resetQuantityAndRate();
         }
     });
 
@@ -155,8 +184,34 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateTotal() {
         const quantity = parseFloat(quantityInput.value) || 0;
         const rate = parseFloat(rateInput.value) || 0;
+        const cost = parseFloat(costSpan.textContent) || 0;
+        
         const total = quantity * rate;
+        const totalCost = quantity * cost;
+        const profit = total - totalCost;
+        
         totalInput.value = total.toFixed(2);
+        profitSpan.textContent = profit.toFixed(2);
+        
+        // Color code profit
+        if (profit > 0) {
+            profitSpan.className = 'currency text-success';
+        } else if (profit < 0) {
+            profitSpan.className = 'currency text-danger';
+        } else {
+            profitSpan.className = 'currency text-muted';
+        }
+    }
+
+    function resetQuantityAndRate() {
+        availableSpan.textContent = '0';
+        costSpan.textContent = '0.00';
+        rateInput.value = '';
+        quantityInput.max = '';
+        quantityInput.value = '';
+        totalInput.value = '';
+        profitSpan.textContent = '0.00';
+        profitSpan.className = 'currency text-muted';
     }
 
     // Validate quantity against available stock
@@ -168,6 +223,35 @@ document.addEventListener('DOMContentLoaded', function() {
             alert(`Only ${available} units available in stock.`);
             this.value = available;
             updateTotal();
+        }
+    });
+
+    // Form validation
+    document.getElementById('saleForm').addEventListener('submit', function(e) {
+        const selectedSize = sizeSelect.value;
+        const selectedColor = colorSelect.value;
+        
+        if (!selectedSize || !selectedColor) {
+            e.preventDefault();
+            alert('Please select both size and color.');
+            return false;
+        }
+        
+        const quantity = parseFloat(quantityInput.value);
+        const rate = parseFloat(rateInput.value);
+        
+        if (quantity <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid quantity.');
+            quantityInput.focus();
+            return false;
+        }
+        
+        if (rate <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid rate.');
+            rateInput.focus();
+            return false;
         }
     });
 });
