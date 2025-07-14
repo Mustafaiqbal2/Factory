@@ -1,0 +1,111 @@
+{% extends "layout.html" %}
+
+{% block title %}Record Payment{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Record Payment</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('payment.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Payments
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Payment Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="paymentForm">
+                    <!-- Customer Selection -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="customer_name" class="form-label">Customer Name *</label>
+                            <select class="form-select" id="customer_name" name="customer_name" required>
+                                <option value="">Select Customer</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.name }}" 
+                                        data-phone="{{ customer.phone }}"
+                                        {% if selected_customer == customer.name %}selected{% endif %}>
+                                    {{ customer.name }} {% if customer.company %}({{ customer.company }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="customer_phone" class="form-label">Customer Phone *</label>
+                            <input type="text" class="form-control" id="customer_phone" name="customer_phone" 
+                                   value="{{ selected_phone or '' }}" readonly required>
+                        </div>
+                    </div>
+
+                    <!-- Payment Details -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="amount" class="form-label">Amount Received *</label>
+                            <div class="input-group">
+                                <span class="input-group-text currency"></span>
+                                <input type="number" class="form-control" id="amount" name="amount" 
+                                       step="0.01" min="0.01" required placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="description" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="description" name="description" 
+                                   placeholder="Payment description (optional)">
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> This will record the amount you have received from the customer and will be used to balance their account.
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('payment.index') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Record Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const customerSelect = document.getElementById('customer_name');
+    const customerPhone = document.getElementById('customer_phone');
+
+    // Handle customer selection
+    customerSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
+            customerPhone.value = selectedOption.dataset.phone;
+        } else {
+            customerPhone.value = '';
+        }
+    });
+
+    // Form validation
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        const amount = parseFloat(document.getElementById('amount').value);
+        
+        if (amount <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid amount greater than 0.');
+            document.getElementById('amount').focus();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

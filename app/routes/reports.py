@@ -28,13 +28,16 @@ def account_report():
             # Get customer's sales
             sales = supabase.table('sale').select('*').eq('customer_name', selected_customer).eq('customer_phone', selected_phone).order('date', desc=True).execute().data
             
+            # Get customer's payments
+            payments = supabase.table('payment').select('*').eq('customer_name', selected_customer).eq('customer_phone', selected_phone).order('date', desc=True).execute().data
+            
             # Get customer's transactions
             transactions = supabase.table('transaction').select('*').eq('customer_name', selected_customer).eq('customer_phone', selected_phone).order('date', desc=True).execute().data
             
             # Calculate balance
             total_sales = sum(sale['total'] for sale in sales if not sale['is_refund'])
             total_refunds = sum(sale['total'] for sale in sales if sale['is_refund'])
-            total_payments = sum(t['amount'] for t in transactions if t['type'] == 'payment')
+            total_payments = sum(payment['amount'] for payment in payments)
             total_advances = sum(t['amount'] for t in transactions if t['type'] == 'advance')
             
             balance = total_sales - total_refunds - total_payments + total_advances
@@ -43,6 +46,7 @@ def account_report():
                 'customer_name': selected_customer,
                 'customer_phone': selected_phone,
                 'sales': sales,
+                'payments': payments,
                 'transactions': transactions,
                 'total_sales': total_sales,
                 'total_refunds': total_refunds,
@@ -186,12 +190,13 @@ def export_account_pdf():
         
         # Get customer data
         sales = supabase.table('sale').select('*').eq('customer_name', customer_name).eq('customer_phone', customer_phone).order('date', desc=True).execute().data
+        payments = supabase.table('payment').select('*').eq('customer_name', customer_name).eq('customer_phone', customer_phone).order('date', desc=True).execute().data
         transactions = supabase.table('transaction').select('*').eq('customer_name', customer_name).eq('customer_phone', customer_phone).order('date', desc=True).execute().data
         
         # Calculate totals
         total_sales = sum(sale['total'] for sale in sales if not sale['is_refund'])
         total_refunds = sum(sale['total'] for sale in sales if sale['is_refund'])
-        total_payments = sum(t['amount'] for t in transactions if t['type'] == 'payment')
+        total_payments = sum(payment['amount'] for payment in payments)
         balance = total_sales - total_refunds - total_payments
         
         # Create PDF

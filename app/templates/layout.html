@@ -335,6 +335,11 @@
                             <i class="bi bi-cart"></i> <span class="nav-text">Sales</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('payment.index') }}">
+                            <i class="bi bi-credit-card"></i> <span class="nav-text">Payments</span>
+                        </a>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-graph-up"></i> <span class="nav-text">Reports</span>
@@ -361,9 +366,10 @@
         {% if messages %}
             <div class="container-fluid mt-3">
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' or category == 'warning' else 'check-circle' if category == 'success' else 'info-circle' }}"></i>
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             </div>
@@ -374,9 +380,7 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-12">
-                <main class="py-4">
-                    {% block content %}{% endblock %}
-                </main>
+                {% block content %}{% endblock %}
             </div>
         </div>
     </div>
@@ -426,7 +430,6 @@
         // Format currency with Nigerian Naira symbol
         function formatCurrency(amount) {
             return '₦' + new Intl.NumberFormat('en-NG', {
-                minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             }).format(amount);
         }
@@ -438,9 +441,8 @@
                 form.addEventListener('submit', function() {
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) {
-                        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
                         submitBtn.disabled = true;
-                        form.classList.add('loading');
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading...';
                     }
                 });
             });
@@ -448,14 +450,12 @@
             // Add hover effects to cards
             const cards = document.querySelectorAll('.card');
             cards.forEach(card => {
-                if (!card.classList.contains('no-hover')) {
-                    card.addEventListener('mouseenter', function() {
-                        this.style.transform = 'translateY(-2px)';
-                    });
-                    card.addEventListener('mouseleave', function() {
-                        this.style.transform = 'translateY(0)';
-                    });
-                }
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
             });
         });
 
@@ -471,8 +471,7 @@
                 let found = false;
 
                 for (let j = 0; j < cells.length; j++) {
-                    const cell = cells[j];
-                    if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
+                    if (cells[j].textContent.toLowerCase().indexOf(filter) > -1) {
                         found = true;
                         break;
                     }
@@ -488,10 +487,8 @@
             const toggler = document.querySelector('.navbar-toggler');
             
             if (navbar && navbar.classList.contains('show') && !navbar.contains(e.target) && !toggler.contains(e.target)) {
-                const bsCollapse = bootstrap.Collapse.getInstance(navbar);
-                if (bsCollapse) {
-                    bsCollapse.hide();
-                }
+                const bsCollapse = new bootstrap.Collapse(navbar);
+                bsCollapse.hide();
             }
         });
 
@@ -502,8 +499,7 @@
                 const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
                     target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
+                        behavior: 'smooth'
                     });
                 }
             });

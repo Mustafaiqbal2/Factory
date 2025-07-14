@@ -30,7 +30,7 @@ def index():
             end_date_plus_one = end_date_plus_one.replace(hour=23, minute=59, second=59)
             query = query.lte('date', end_date_plus_one.isoformat())
         
-        # Execute query with ordering
+        # Execute query with ordering - Fixed order syntax
         sales = query.order('date', desc=True).execute().data
         
         return render_template('sale/index.html', sales=sales, 
@@ -62,15 +62,18 @@ def add():
                 flash('Customer not found. Please add the customer first.', 'error')
                 return redirect(url_for('sale.add'))
             
-            # Check stock availability
+            # Check stock availability (allow negative inventory)
             stock_item = supabase.table('stock').select('*').eq('size', stock_size).eq('color', stock_color).execute().data
             if not stock_item:
                 flash('Stock item not found.', 'error')
                 return redirect(url_for('sale.add'))
             
-            if stock_item[0]['quantity'] < quantity:
-                flash(f'Insufficient stock. Available: {stock_item[0]["quantity"]}', 'error')
-                return redirect(url_for('sale.add'))
+            current_quantity = stock_item[0]['quantity']
+            new_quantity = current_quantity - quantity
+            
+            # Warning for negative inventory but allow the sale
+            if new_quantity < 0:
+                flash(f'Warning: Stock will go negative. Current: {current_quantity}, After sale: {new_quantity}', 'warning')
             
             # Calculate cost and profit
             cost_per_unit = stock_item[0]['cost_per_unit']
@@ -96,8 +99,7 @@ def add():
             sale_result = supabase.table('sale').insert(sale_data).execute()
             sale_id = sale_result.data[0]['sale_id']
             
-            # Update stock quantity and total cost
-            new_quantity = stock_item[0]['quantity'] - quantity
+            # Update stock quantity and total cost (allow negative)
             new_total_cost = stock_item[0]['total_cost'] - total_cost
             supabase.table('stock').update({
                 'quantity': new_quantity,
@@ -120,9 +122,9 @@ def add():
             flash('Sale added successfully!', 'success')
             return redirect(url_for('sale.index'))
         
-        # GET request - load data for form
+        # GET request - load data for form (show all stock items, even with 0 or negative quantity)
         customers = supabase.table('customer').select('*').order('name').execute().data
-        stock_items = supabase.table('stock').select('*').filter('quantity', 'gt', 0).order('size').execute().data
+        stock_items = supabase.table('stock').select('*').order('size').execute().data
         
         # Pre-fill customer if passed in query params
         selected_customer = request.args.get('customer')

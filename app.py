@@ -17,6 +17,7 @@ def create_app():
     from app.routes.stock import stock_bp
     from app.routes.customer import customer_bp
     from app.routes.sale import sale_bp
+    from app.routes.payment import payment_bp
     from app.routes.reports import reports_bp
     from app.routes.main import main_bp
     
@@ -24,6 +25,7 @@ def create_app():
     app.register_blueprint(stock_bp, url_prefix='/stock')
     app.register_blueprint(customer_bp, url_prefix='/customer')
     app.register_blueprint(sale_bp, url_prefix='/sale')
+    app.register_blueprint(payment_bp, url_prefix='/payment')
     app.register_blueprint(reports_bp, url_prefix='/reports')
     
     return app

@@ -28,7 +28,8 @@
                         <div class="col-md-6">
                             <label for="size" class="form-label">Size *</label>
                             <input type="text" class="form-control" id="size" name="size" required 
-                                   placeholder="e.g., Small, Medium, Large">
+                                   placeholder="e.g., 12/14, 14/16, 16/18" pattern="^\d+/\d+$">
+                            <small class="form-text text-muted">Format: numbers/numbers (e.g., 12/14)</small>
                         </div>
                         <div class="col-md-6">
                             <label for="color" class="form-label">Color *</label>
@@ -45,14 +46,15 @@
                         <div class="col-md-6">
                             <label for="quantity" class="form-label">Quantity *</label>
                             <input type="number" class="form-control" id="quantity" name="quantity" 
-                                   min="0" step="1" required placeholder="0">
+                                   step="1" required placeholder="0">
+                            <small class="form-text text-muted">Can be negative for backorders</small>
                         </div>
                         <div class="col-md-6">
                             <label for="total_cost" class="form-label">Total Inventory Value *</label>
                             <div class="input-group">
                                 <span class="input-group-text currency"></span>
                                 <input type="number" class="form-control" id="total_cost" name="total_cost" 
-                                       step="0.01" min="0" required placeholder="0.00">
+                                       step="0.01" required placeholder="0.00">
                             </div>
                             <small class="form-text text-muted">Total value of all units</small>
                         </div>
@@ -93,31 +95,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const quantityInput = document.getElementById('quantity');
     const totalCostInput = document.getElementById('total_cost');
     const costPerUnitDisplay = document.getElementById('cost_per_unit_display');
+    const sizeInput = document.getElementById('size');
 
     function updateCostPerUnit() {
         const quantity = parseFloat(quantityInput.value) || 0;
         const totalCost = parseFloat(totalCostInput.value) || 0;
-        const costPerUnit = quantity > 0 ? totalCost / quantity : 0;
+        const costPerUnit = quantity !== 0 ? totalCost / quantity : 0;
         
-        costPerUnitDisplay.textContent = `₦${costPerUnit.toFixed(2)}`;
+        costPerUnitDisplay.textContent = `₦${Math.abs(costPerUnit).toFixed(2)}`;
     }
 
     // Add event listeners for real-time calculation
     quantityInput.addEventListener('input', updateCostPerUnit);
     totalCostInput.addEventListener('input', updateCostPerUnit);
     
-    // Validate inputs
-    quantityInput.addEventListener('change', function() {
-        if (this.value < 0) {
-            this.value = 0;
-            updateCostPerUnit();
-        }
-    });
-    
-    totalCostInput.addEventListener('change', function() {
-        if (this.value < 0) {
-            this.value = 0;
-            updateCostPerUnit();
+    // Size input validation
+    sizeInput.addEventListener('blur', function() {
+        const sizePattern = /^\d+\/\d+$/;
+        if (this.value && !sizePattern.test(this.value)) {
+            alert('Size must be in the format: numbers/numbers (e.g., 12/14)');
+            this.focus();
         }
     });
 
@@ -128,17 +125,25 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('stockForm').addEventListener('submit', function(e) {
         const quantity = parseFloat(quantityInput.value);
         const totalCost = parseFloat(totalCostInput.value);
+        const sizePattern = /^\d+\/\d+$/;
         
-        if (quantity <= 0) {
+        if (!sizePattern.test(sizeInput.value)) {
             e.preventDefault();
-            alert('Please enter a valid quantity greater than 0.');
+            alert('Size must be in the format: numbers/numbers (e.g., 12/14)');
+            sizeInput.focus();
+            return false;
+        }
+        
+        if (quantity === 0) {
+            e.preventDefault();
+            alert('Quantity cannot be zero.');
             quantityInput.focus();
             return false;
         }
         
-        if (totalCost <= 0) {
+        if (totalCost === 0) {
             e.preventDefault();
-            alert('Please enter a valid total cost greater than 0.');
+            alert('Total cost cannot be zero.');
             totalCostInput.focus();
             return false;
         }
