@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from functools import wraps
+import os
 
 auth_bp = Blueprint('auth', __name__)
 
-# Simple password - in production, use environment variables and hashing
-ADMIN_PASSWORD = "hunainrao123"
+# Get password from environment variable for production security
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', "hunainrao123")
 
 def login_required(f):
     """Decorator to require login for protected routes"""

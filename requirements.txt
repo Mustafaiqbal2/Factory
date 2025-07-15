@@ -5,3 +5,4 @@ reportlab
 Werkzeug
 Jinja2
 gunicorn
+playwright

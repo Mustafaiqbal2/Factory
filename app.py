@@ -12,10 +12,16 @@ def create_app():
                 template_folder='app/templates',
                 static_folder='app/static')
     
+    # Production-ready configuration
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     
     # Session configuration
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hours
+    
+    # Production settings
+    if os.getenv('FLASK_ENV') == 'production':
+        app.config['DEBUG'] = False
+        app.config['TESTING'] = False
     
     # Register blueprints
     from app.routes.auth import auth_bp
@@ -36,8 +42,9 @@ def create_app():
     
     return app
 
-# Create the Flask application instance for Flask CLI
+# Create the Flask application instance
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
