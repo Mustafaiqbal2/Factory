@@ -140,44 +140,67 @@ def sales_by_stock():
                                 key=lambda x: x[1]['total_sales_amount'] - x[1]['total_refund_amount'], 
                                 reverse=True))
         
-        # Prepare chart data - only if we have data
-        chart_data = {}
+        # ENHANCED COLORFUL CHART DATA
+        chart_labels = []
+        chart_values = []
+        chart_colors = []
+        
         if stock_sales:
-            chart_labels = []
-            chart_values = []
-            chart_colors = []
-            
+            # Enhanced color maps with more vibrant colors
             color_map = {
-                'Red': '#dc3545', 'Blue': '#0d6efd', 'Black': '#212529', 
-                'White': '#6c757d', 'Green': '#198754', 'Yellow': '#ffc107',
-                'Purple': '#6f42c1', 'Orange': '#fd7e14', 'Pink': '#d63384',
-                'Brown': '#8B4513', 'Grey': '#6c757d', 'Gray': '#6c757d'
+                'Red': '#FF4757', 'Blue': '#3742FA', 'Black': '#2F3542', 
+                'White': '#A4B0BE', 'Green': '#2ED573', 'Yellow': '#FFA502',
+                'Purple': '#8E44AD', 'Orange': '#FF6348', 'Pink': '#FF3838',
+                'Brown': '#8B4513', 'Grey': '#57606F', 'Gray': '#57606F'
             }
             
+            # Vibrant palette for items/sizes
+            vibrant_palette = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+                '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43',
+                '#EE5A24', '#009432', '#0652DD', '#9980FA', '#FFC312',
+                '#C4E538', '#12CBC4', '#FDA7DF', '#ED4C67', '#F79F1F'
+            ]
+            
+            # ENSURE ONLY PRIMITIVE DATA TYPES
+            color_index = 0
             for key, data in stock_sales.items():
-                net_revenue = data['total_sales_amount'] - data['total_refund_amount']
-                chart_labels.append(data['group_name'])
-                chart_values.append(float(net_revenue))
+                net_revenue = float(data['total_sales_amount'] - data['total_refund_amount'])
+                chart_labels.append(str(data['group_name']))
+                chart_values.append(net_revenue)
                 
                 # Set color based on group type
                 if group_by == 'color':
-                    chart_colors.append(color_map.get(data['group_name'], '#6c757d'))
+                    chart_colors.append(color_map.get(str(data['group_name']), '#6c757d'))
                 else:
-                    chart_colors.append('#0d6efd')
-            
-            chart_data = {
-                'labels': json.dumps(chart_labels),
-                'values': json.dumps(chart_values),
-                'colors': json.dumps(chart_colors)
-            }
+                    # Use vibrant palette for items and sizes
+                    chart_colors.append(vibrant_palette[color_index % len(vibrant_palette)])
+                    color_index += 1
+        
+        # PASS JSON STRINGS DIRECTLY
+        chart_data = {
+            'labels_json': json.dumps(chart_labels),
+            'values_json': json.dumps(chart_values),
+            'colors_json': json.dumps(chart_colors)
+        }
         
         return render_template('reports/sales_by_stock.html', 
                              stock_sales=stock_sales, 
                              group_by=group_by,
                              chart_data=chart_data)
     except Exception as e:
+        print(f"ERROR in sales_by_stock: {str(e)}")
+        import traceback
+        traceback.print_exc()
         flash(f'Error generating sales by stock report: {str(e)}', 'error')
-        return render_template('reports/sales_by_stock.html', stock_sales={}, group_by='item', chart_data={})
+        return render_template('reports/sales_by_stock.html', 
+                             stock_sales={}, 
+                             group_by='item', 
+                             chart_data={
+                                 'labels_json': json.dumps([]),
+                                 'values_json': json.dumps([]),
+                                 'colors_json': json.dumps([])
+                             })
 
 @reports_bp.route('/sales_by_customer')
 def sales_by_customer():
@@ -241,16 +264,25 @@ def sales_by_customer():
             customer_sales = dict(sorted(customer_sales.items(), 
                                        key=lambda x: x[1]['net_revenue'], reverse=True))
         
-        # Prepare chart data (top 10 customers)
+        # FIXED: Prepare chart data (top 15 customers instead of limiting to 3)
         chart_labels = []
         chart_values = []
-        count = 0
+        chart_colors = []
         
+        # Vibrant color palette for customers
+        customer_colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+            '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43',
+            '#EE5A24', '#009432', '#0652DD', '#9980FA', '#FFC312',
+            '#C4E538', '#12CBC4', '#FDA7DF', '#ED4C67', '#F79F1F'
+        ]
+        
+        count = 0
         for key, data in customer_sales.items():
-            if count >= 10:
+            if count >= 15:  # Show top 15 customers in chart
                 break
             
-            chart_labels.append(data['customer_name'])
+            chart_labels.append(str(data['customer_name']))
             
             if sort_by == 'quantity':
                 chart_values.append(float(data['net_quantity']))
@@ -259,11 +291,15 @@ def sales_by_customer():
             else:
                 chart_values.append(float(data['net_revenue']))
             
+            # Assign color from palette
+            chart_colors.append(customer_colors[count % len(customer_colors)])
             count += 1
         
+        # PASS JSON STRINGS DIRECTLY
         chart_data = {
-            'labels': json.dumps(chart_labels),
-            'values': json.dumps(chart_values),
+            'labels_json': json.dumps(chart_labels),
+            'values_json': json.dumps(chart_values),
+            'colors_json': json.dumps(chart_colors),
             'metric': sort_by
         }
         
@@ -273,8 +309,16 @@ def sales_by_customer():
                              chart_data=chart_data)
     except Exception as e:
         flash(f'Error generating sales by customer report: {str(e)}', 'error')
-        return render_template('reports/sales_by_customer.html', customer_sales={}, sort_by='revenue', chart_data={})
-
+        return render_template('reports/sales_by_customer.html', 
+                             customer_sales={}, 
+                             sort_by='revenue', 
+                             chart_data={
+                                 'labels_json': json.dumps([]),
+                                 'values_json': json.dumps([]),
+                                 'colors_json': json.dumps([]),
+                                 'metric': 'revenue'
+                             })
+                
 @reports_bp.route('/profit')
 def profit_report():
     try:

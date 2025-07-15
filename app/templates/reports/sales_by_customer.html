@@ -45,14 +45,17 @@
 
 {% if customer_sales %}
 <!-- Top Customers Chart -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">
-            <i class="bi bi-trophy"></i> Top 10 Customers by {{ sort_by.title() }}
-        </h5>
-    </div>
-    <div class="card-body">
-        <canvas id="topCustomersChart" height="100"></canvas>
+<div class="col-12">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-bar-chart-fill me-2"></i>
+                Top Customers by {{ chart_data.metric.title() }}
+            </h5>
+        </div>
+        <div class="card-body" style="min-height: 400px; padding: 20px;"> <!-- INCREASED PADDING AND MIN-HEIGHT -->
+            <canvas id="topCustomersChart" style="max-height: none !important;"></canvas> <!-- REMOVE HEIGHT RESTRICTION -->
+        </div>
     </div>
 </div>
 
@@ -116,7 +119,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for loop_customer_key, data in customer_sales.items() %}
+                    {% for customer_key, data in customer_sales.items() %}
                     {% set rank = loop.index %}
                     <tr class="{% if rank <= 3 %}table-warning{% endif %}">
                         <td>
@@ -249,63 +252,147 @@
 {% endblock %}
 
 {% block scripts %}
-{% if customer_sales and chart_data %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Top Customers Bar Chart
-    const ctx = document.getElementById('topCustomersChart').getContext('2d');
-    const chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: {{ chart_data.labels|safe }},
-            datasets: [{
-                label: '{{ chart_data.metric.title() }}',
-                data: {{ chart_data.values|safe }},
-                backgroundColor: 'rgba(13, 110, 253, 0.8)',
-                borderColor: 'rgba(13, 110, 253, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            {% if chart_data.metric == 'revenue' %}
-                            return '₦' + value.toFixed(2);
-                            {% else %}
-                            return value;
-                            {% endif %}
-                        }
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
+    const hasData = {% if customer_sales %}true{% else %}false{% endif %};
+    const metric = '{{ chart_data.metric }}';
+    
+    console.log('Has customer data:', hasData);
+    console.log('Metric:', metric);
+    
+    if (hasData) {
+        // PARSE THE JSON STRINGS DIRECTLY - FIXED WITH COLORS
+        const chartLabels = JSON.parse('{{ chart_data.labels_json|safe }}');
+        const chartValues = JSON.parse('{{ chart_data.values_json|safe }}');
+        const chartColors = JSON.parse('{{ chart_data.colors_json|safe }}');
+        
+        console.log('Chart data:', {
+            labels: chartLabels,
+            values: chartValues,
+            colors: chartColors,
+            metric: metric
+        });
+        
+        if (chartLabels.length > 0) {
+            // MAKE THE CHART CONTAINER TALLER BASED ON NUMBER OF CUSTOMERS
+            const chartContainer = document.getElementById('topCustomersChart').parentElement;
+            const minHeight = Math.max(400, chartLabels.length * 50); // 50px per customer, minimum 400px
+            chartContainer.style.height = minHeight + 'px';
+            document.getElementById('topCustomersChart').style.height = minHeight + 'px';
+            
+            const ctx = document.getElementById('topCustomersChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: metric.charAt(0).toUpperCase() + metric.slice(1),
+                        data: chartValues,
+                        backgroundColor: chartColors, // USE THE COLORFUL PALETTE
+                        borderColor: chartColors.map(color => color), // Solid borders
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    }]
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            {% if chart_data.metric == 'revenue' %}
-                            return `Revenue: ₦${context.parsed.x.toFixed(2)}`;
-                            {% elif chart_data.metric == 'quantity' %}
-                            return `Quantity: ${context.parsed.x} units`;
-                            {% else %}
-                            return `Transactions: ${context.parsed.x}`;
-                            {% endif %}
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // IMPORTANT: Allow custom height
+                    indexAxis: 'y', // Horizontal bars
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
                         }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)',
+                                lineWidth: 1
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                },
+                                callback: function(value) {
+                                    if (metric === 'revenue') {
+                                        return '₦' + value.toFixed(0);
+                                    } else {
+                                        return value;
+                                    }
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false // Remove horizontal grid lines for cleaner look
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                },
+                                color: '#333333',
+                                maxTicksLimit: chartLabels.length, // Show all customer names
+                                callback: function(value, index) {
+                                    // Truncate long names for better display
+                                    const label = this.getLabelForValue(value);
+                                    return label.length > 15 ? label.substring(0, 15) + '...' : label;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 12
+                            },
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label; // Show full customer name in tooltip
+                                },
+                                label: function(context) {
+                                    if (metric === 'revenue') {
+                                        return `Revenue: ₦${context.parsed.x.toFixed(2)}`;
+                                    } else if (metric === 'quantity') {
+                                        return `Quantity: ${context.parsed.x} units`;
+                                    } else {
+                                        return `Transactions: ${context.parsed.x}`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    // INCREASE ANIMATION DURATION FOR SMOOTH EFFECT
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeInOutQuart'
                     }
                 }
-            }
+            });
+        } else {
+            document.getElementById('topCustomersChart').parentElement.innerHTML = 
+                '<div class="text-center py-4"><p class="text-muted">No data for chart</p></div>';
         }
-    });
+    } else {
+        const chartContainer = document.getElementById('topCustomersChart').parentElement;
+        chartContainer.innerHTML = '<div class="text-center py-4"><i class="bi bi-people display-6 text-muted"></i><p class="text-muted mt-2">No customer data available for chart</p></div>';
+    }
 });
 </script>
-{% endif %}
 {% endblock %}

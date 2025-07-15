@@ -231,86 +231,138 @@
 {% endblock %}
 
 {% block scripts %}
-{% if stock_sales and chart_data %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Revenue Pie Chart
-    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-    const revenueChart = new Chart(revenueCtx, {
-        type: 'pie',
-        data: {
-            labels: {{ chart_data.labels|safe }},
-            datasets: [{
-                data: {{ chart_data.values|safe }},
-                backgroundColor: {{ chart_data.colors|safe }},
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
+    const hasData = {% if stock_sales %}true{% else %}false{% endif %};
+    
+    console.log('Has data:', hasData);
+    
+    if (hasData) {
+        // PARSE THE JSON STRINGS DIRECTLY - FIXED
+        const chartLabels = JSON.parse('{{ chart_data.labels_json|safe }}');
+        const chartValues = JSON.parse('{{ chart_data.values_json|safe }}');
+        const chartColors = JSON.parse('{{ chart_data.colors_json|safe }}');
+        
+        console.log('Chart data:', {
+            labels: chartLabels,
+            values: chartValues,
+            colors: chartColors
+        });
+        
+        if (chartLabels.length > 0) {
+            // Revenue Pie Chart - MORE COLORFUL
+            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+            const revenueChart = new Chart(revenueCtx, {
+                type: 'pie',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartValues,
+                        backgroundColor: chartColors,
+                        borderWidth: 3,
+                        borderColor: '#ffffff',
+                        hoverBorderWidth: 4,
+                        hoverBorderColor: '#000000'
+                    }]
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = context.parsed;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${context.label}: ₦${value.toFixed(2)} (${percentage}%)`;
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ₦${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
-    });
+            });
 
-    // Sales Bar Chart
-    const salesCtx = document.getElementById('salesChart').getContext('2d');
-    const salesChart = new Chart(salesCtx, {
-        type: 'bar',
-        data: {
-            labels: {{ chart_data.labels|safe }},
-            datasets: [{
-                label: 'Net Revenue',
-                data: {{ chart_data.values|safe }},
-                backgroundColor: 'rgba(13, 110, 253, 0.8)',
-                borderColor: 'rgba(13, 110, 253, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '₦' + value.toFixed(2);
-                        }
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
+            // Sales Bar Chart - MORE COLORFUL
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            const salesChart = new Chart(salesCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Net Revenue',
+                        data: chartValues,
+                        backgroundColor: chartColors, // Use the colorful array
+                        borderColor: chartColors.map(color => color), // Same colors for border
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                    }]
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `Revenue: ₦${context.parsed.y.toFixed(2)}`;
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '₦' + value.toFixed(2);
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            callbacks: {
+                                label: function(context) {
+                                    return `Revenue: ₦${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
                         }
                     }
                 }
-            }
+            });
+        } else {
+            document.getElementById('revenueChart').parentElement.innerHTML = 
+                '<div class="text-center py-4"><p class="text-muted">No data for pie chart</p></div>';
+            document.getElementById('salesChart').parentElement.innerHTML = 
+                '<div class="text-center py-4"><p class="text-muted">No data for bar chart</p></div>';
         }
-    });
+    } else {
+        const chartContainers = document.querySelectorAll('.card-body canvas');
+        chartContainers.forEach(function(canvas) {
+            canvas.parentElement.innerHTML = '<div class="text-center py-4"><i class="bi bi-graph-up display-6 text-muted"></i><p class="text-muted mt-2">No data available for charts</p></div>';
+        });
+    }
 });
 </script>
-{% endif %}
 {% endblock %}
