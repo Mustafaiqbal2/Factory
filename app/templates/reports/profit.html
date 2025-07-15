@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Profit Report{% endblock %}
+{% block title %}Profit Analysis Report{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -10,91 +10,230 @@
             <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back to Reports
             </a>
+            {% if profit_by_stock %}
+            <a href="{{ url_for('reports.export_profit_pdf') }}" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-pdf"></i> Export PDF
+            </a>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Total Profit Summary -->
+{% if summary_stats %}
+<!-- Key Metrics Dashboard -->
 <div class="row mb-4">
-    <div class="col-md-12">
+    <div class="col-md-3">
+        <div class="card text-white {% if summary_stats.total_profit > 0 %}bg-success{% elif summary_stats.total_profit < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+            <div class="card-body text-center">
+                <h4><span class="currency">{{ "%.2f"|format(summary_stats.total_profit|abs) }}</span></h4>
+                <small>
+                    {% if summary_stats.total_profit > 0 %}
+                    <i class="bi bi-arrow-up"></i> Total Profit
+                    {% elif summary_stats.total_profit < 0 %}
+                    <i class="bi bi-arrow-down"></i> Total Loss
+                    {% else %}
+                    <i class="bi bi-dash"></i> Break Even
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body text-center">
+                <h4><span class="currency">{{ "%.2f"|format(summary_stats.total_revenue) }}</span></h4>
+                <small><i class="bi bi-graph-up"></i> Total Revenue</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body text-center">
+                <h4><span class="currency">{{ "%.2f"|format(summary_stats.total_cost) }}</span></h4>
+                <small><i class="bi bi-calculator"></i> Total Cost</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body text-center">
+                <h4>{{ "%.1f"|format(summary_stats.overall_profit_margin) }}%</h4>
+                <small><i class="bi bi-percent"></i> Profit Margin</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cash Flow and Business Health -->
+<div class="row mb-4">
+    <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Overall Profit Summary</h5>
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-wallet2"></i> Cash Flow Analysis
+                </h5>
             </div>
-            <div class="card-body text-center">
-                <h2 class="{% if total_profit > 0 %}text-success{% elif total_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
-                    ${{ "%.2f"|format(total_profit) }}
-                </h2>
-                <p class="text-muted">
-                    {% if total_profit > 0 %}
-                    <i class="bi bi-arrow-up-circle"></i> Total Profit
-                    {% elif total_profit < 0 %}
-                    <i class="bi bi-arrow-down-circle"></i> Total Loss
-                    {% else %}
-                    <i class="bi bi-dash-circle"></i> Break Even
-                    {% endif %}
-                </p>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="text-success">Payments Received</h6>
+                        <h4><span class="currency">{{ "%.2f"|format(summary_stats.total_payments_received) }}</span></h4>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="{% if summary_stats.cash_flow > 0 %}text-success{% else %}text-danger{% endif %}">Net Cash Flow</h6>
+                        <h4 class="{% if summary_stats.cash_flow > 0 %}text-success{% else %}text-danger{% endif %}">
+                            <span class="currency">{{ "%.2f"|format(summary_stats.cash_flow) }}</span>
+                        </h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart"></i> Portfolio Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h6 class="text-success">Profitable</h6>
+                        <h4 class="text-success">{{ summary_stats.profitable_items }}</h4>
+                        <small>items</small>
+                    </div>
+                    <div class="col-4">
+                        <h6 class="text-danger">Loss Making</h6>
+                        <h4 class="text-danger">{{ summary_stats.loss_making_items }}</h4>
+                        <small>items</small>
+                    </div>
+                    <div class="col-4">
+                        <h6 class="text-muted">Break Even</h6>
+                        <h4 class="text-muted">{{ summary_stats.break_even_items }}</h4>
+                        <small>items</small>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Profit by Stock Item -->
-<div class="card">
+<!-- Charts Section -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart"></i> Profitability by Stock
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="profitByStockChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> Monthly Profit Trend
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyTrendChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revenue vs Cost Comparison -->
+<div class="card mb-4">
     <div class="card-header">
-        <h5 class="card-title mb-0">Profit by Stock Item</h5>
+        <h5 class="card-title mb-0">
+            <i class="bi bi-bar-chart-line"></i> Revenue vs Cost Analysis
+        </h5>
     </div>
     <div class="card-body">
-        {% if profit_by_stock %}
+        <canvas id="revenueCostChart" height="150"></canvas>
+    </div>
+</div>
+
+<!-- Detailed Profit Analysis Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-table"></i> Detailed Profit Analysis by Stock Item
+        </h5>
+    </div>
+    <div class="card-body">
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
+                        <th>Rank</th>
                         <th>Stock Item</th>
-                        <th>Details</th>
                         <th>Sales Count</th>
-                        <th>Total Profit/Loss</th>
-                        <th>Avg Profit per Sale</th>
+                        <th>Total Revenue</th>
+                        <th>Total Cost</th>
+                        <th>Total Profit</th>
+                        <th>Profit Margin</th>
+                        <th>Avg Profit/Sale</th>
                         <th>Performance</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for stock_id, data in profit_by_stock.items() %}
-                    <tr>
+                    {% set rank = loop.index %}
+                    {% set avg_profit = data.total_profit / data.sales_count if data.sales_count > 0 else 0 %}
+                    <tr class="{% if rank <= 3 and data.total_profit > 0 %}table-success{% elif data.total_profit < 0 %}table-danger{% endif %}">
                         <td>
-                            <strong>{{ data.stock_item.name }}</strong>
+                            <strong class="{% if rank == 1 and data.total_profit > 0 %}text-success{% elif rank == 2 and data.total_profit > 0 %}text-info{% elif rank == 3 and data.total_profit > 0 %}text-warning{% endif %}">
+                                #{{ rank }}
+                                {% if rank == 1 and data.total_profit > 0 %}<i class="bi bi-trophy"></i>{% endif %}
+                            </strong>
                         </td>
                         <td>
-                            {% if data.stock_item.size or data.stock_item.color %}
-                            <small class="text-muted">
-                                {% if data.stock_item.size %}{{ data.stock_item.size }}{% endif %}
-                                {% if data.stock_item.size and data.stock_item.color %} - {% endif %}
-                                {% if data.stock_item.color %}{{ data.stock_item.color }}{% endif %}
-                            </small>
-                            {% else %}
-                            -
-                            {% endif %}
+                            <strong>{{ data.stock_item.size }} - {{ data.stock_item.color }}</strong>
                         </td>
-                        <td>{{ data.sales_count }}</td>
                         <td>
-                            <span class="{% if data.total_profit > 0 %}text-success{% elif data.total_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                ${{ "%.2f"|format(data.total_profit) }}
+                            <span class="badge bg-primary">{{ data.sales_count }}</span>
+                        </td>
+                        <td><span class="currency">{{ "%.2f"|format(data.total_revenue) }}</span></td>
+                        <td><span class="currency">{{ "%.2f"|format(data.total_cost) }}</span></td>
+                        <td>
+                            <strong class="{% if data.total_profit > 0 %}text-success{% elif data.total_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                <span class="currency">{{ "%.2f"|format(data.total_profit) }}</span>
+                            </strong>
+                        </td>
+                        <td>
+                            <span class="{% if data.profit_margin > 0 %}text-success{% elif data.profit_margin < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                {{ "%.1f"|format(data.profit_margin) }}%
                             </span>
                         </td>
                         <td>
-                            {% set avg_profit = data.total_profit / data.sales_count if data.sales_count > 0 else 0 %}
                             <span class="{% if avg_profit > 0 %}text-success{% elif avg_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                ${{ "%.2f"|format(avg_profit) }}
+                                <span class="currency">{{ "%.2f"|format(avg_profit) }}</span>
                             </span>
                         </td>
                         <td>
                             {% if data.total_profit > 0 %}
-                            <span class="badge bg-success">
-                                <i class="bi bi-arrow-up"></i> Profitable
-                            </span>
+                                {% if data.profit_margin > 20 %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-arrow-up"></i> Excellent
+                                </span>
+                                {% elif data.profit_margin > 10 %}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-arrow-up-right"></i> Good
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-arrow-right"></i> Fair
+                                </span>
+                                {% endif %}
                             {% elif data.total_profit < 0 %}
                             <span class="badge bg-danger">
-                                <i class="bi bi-arrow-down"></i> Loss Making
+                                <i class="bi bi-arrow-down"></i> Loss
                             </span>
                             {% else %}
                             <span class="badge bg-secondary">
@@ -109,99 +248,237 @@
                     <tr class="table-info">
                         <th colspan="2">Total</th>
                         <th>{{ profit_by_stock.values()|sum(attribute='sales_count') }}</th>
+                        <th><span class="currency">{{ "%.2f"|format(summary_stats.total_revenue) }}</span></th>
+                        <th><span class="currency">{{ "%.2f"|format(summary_stats.total_cost) }}</span></th>
                         <th>
-                            <strong class="{% if total_profit > 0 %}text-success{% elif total_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                ${{ "%.2f"|format(total_profit) }}
+                            <strong class="{% if summary_stats.total_profit > 0 %}text-success{% elif summary_stats.total_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                <span class="currency">{{ "%.2f"|format(summary_stats.total_profit) }}</span>
                             </strong>
                         </th>
+                        <th><strong>{{ "%.1f"|format(summary_stats.overall_profit_margin) }}%</strong></th>
                         <th colspan="2">-</th>
                     </tr>
                 </tfoot>
             </table>
         </div>
-
-        <!-- Profit Analysis Insights -->
-        <div class="row mt-4">
-            <div class="col-md-4">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="text-success">
-                            {{ profit_by_stock.values()|selectattr('total_profit', 'greaterthan', 0)|list|length }}
-                        </h5>
-                        <small class="text-muted">Profitable Items</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="text-danger">
-                            {{ profit_by_stock.values()|selectattr('total_profit', 'lessthan', 0)|list|length }}
-                        </h5>
-                        <small class="text-muted">Loss Making Items</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="text-muted">
-                            {{ profit_by_stock.values()|selectattr('total_profit', 'equalto', 0)|list|length }}
-                        </h5>
-                        <small class="text-muted">Break Even Items</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-graph-up display-1 text-muted"></i>
-            <h3 class="mt-3">No Profit Data</h3>
-            <p class="text-muted">No sales have been recorded yet to calculate profit.</p>
-            <a href="{{ url_for('sale.add') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Record First Sale
-            </a>
-        </div>
-        {% endif %}
     </div>
 </div>
 
-{% if profit_by_stock %}
-<!-- Business Insights -->
+<!-- Business Insights and Recommendations -->
 <div class="card mt-4">
     <div class="card-header">
-        <h5 class="card-title mb-0">Business Insights</h5>
+        <h5 class="card-title mb-0">
+            <i class="bi bi-lightbulb"></i> Business Insights & Recommendations
+        </h5>
     </div>
     <div class="card-body">
-        <div class="alert alert-info">
-            <h6><i class="bi bi-lightbulb"></i> Key Insights:</h6>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-trophy"></i> Best Performers:</h6>
+                    <ul class="mb-0">
+                        {% for item in summary_stats.top_3_profitable %}
+                        <li><strong>{{ item.stock_item.size }} {{ item.stock_item.color }}</strong> - 
+                            ₦{{ "%.2f"|format(item.total_profit) }} profit ({{ "%.1f"|format(item.profit_margin) }}% margin)</li>
+                        {% endfor %}
+                        {% if not summary_stats.top_3_profitable %}
+                        <li>No profitable items yet.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Areas for Improvement:</h6>
+                    <ul class="mb-0">
+                        {% for item in summary_stats.worst_3_loss %}
+                        <li><strong>{{ item.stock_item.size }} {{ item.stock_item.color }}</strong> - 
+                            ₦{{ "%.2f"|format(item.total_profit|abs) }} loss</li>
+                        {% endfor %}
+                        {% if not summary_stats.worst_3_loss %}
+                        <li>All items are profitable! Great job!</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-success mt-3">
+            <h6><i class="bi bi-lightbulb"></i> Strategic Recommendations:</h6>
             <ul class="mb-0">
-                {% set profitable_items = profit_by_stock.values()|selectattr('total_profit', 'greaterthan', 0)|list %}
-                {% set loss_items = profit_by_stock.values()|selectattr('total_profit', 'lessthan', 0)|list %}
-                
-                {% if profitable_items %}
-                <li><strong>Most Profitable Item:</strong> 
-                    {% set best_item = profitable_items|max(attribute='total_profit') %}
-                    {{ best_item.stock_item.name }} (${{"%.2f"|format(best_item.total_profit)}} profit)
-                </li>
+                {% if summary_stats.overall_profit_margin > 15 %}
+                <li><strong>Excellent Performance:</strong> Your overall profit margin of {{ "%.1f"|format(summary_stats.overall_profit_margin) }}% is excellent. Consider expanding successful product lines.</li>
+                {% elif summary_stats.overall_profit_margin > 10 %}
+                <li><strong>Good Performance:</strong> {{ "%.1f"|format(summary_stats.overall_profit_margin) }}% profit margin is solid. Look for opportunities to optimize costs on lower-margin items.</li>
+                {% elif summary_stats.overall_profit_margin > 0 %}
+                <li><strong>Room for Improvement:</strong> {{ "%.1f"|format(summary_stats.overall_profit_margin) }}% margin suggests reviewing pricing strategy and cost management.</li>
+                {% else %}
+                <li><strong>Action Required:</strong> Negative margins require immediate attention to pricing and cost structure.</li>
                 {% endif %}
                 
-                {% if loss_items %}
-                <li><strong>Biggest Loss Item:</strong> 
-                    {% set worst_item = loss_items|min(attribute='total_profit') %}
-                    {{ worst_item.stock_item.name }} (${{"%.2f"|format(worst_item.total_profit)}} loss)
-                </li>
+                {% if summary_stats.cash_flow > summary_stats.total_profit * 0.8 %}
+                <li><strong>Healthy Cash Flow:</strong> Good collection rate - most profits are being converted to cash.</li>
+                {% else %}
+                <li><strong>Collection Focus:</strong> Consider improving collection processes to convert more sales to cash.</li>
                 {% endif %}
                 
-                <li><strong>Overall Performance:</strong> 
-                    {% if total_profit > 0 %}Your business is generating positive returns!
-                    {% elif total_profit < 0 %}Consider reviewing pricing strategy and cost management.
-                    {% else %}You're breaking even - look for opportunities to optimize profits.
-                    {% endif %}
-                </li>
+                {% if summary_stats.profitable_items > summary_stats.loss_making_items * 3 %}
+                <li><strong>Strong Portfolio:</strong> Most items are profitable. Focus on scaling successful products.</li>
+                {% else %}
+                <li><strong>Portfolio Review:</strong> Consider discontinuing or repricing loss-making items.</li>
+                {% endif %}
             </ul>
         </div>
     </div>
 </div>
+
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-graph-up display-1 text-muted"></i>
+    <h3 class="mt-3">No Profit Data</h3>
+    <p class="text-muted">No sales have been recorded yet to calculate profit.</p>
+    <a href="{{ url_for('sale.add') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Record First Sale
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if profit_by_stock and chart_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Profit by Stock Chart
+    const profitCtx = document.getElementById('profitByStockChart').getContext('2d');
+    const profitChart = new Chart(profitCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_data.stock_labels|safe }},
+            datasets: [{
+                label: 'Profit',
+                data: {{ chart_data.stock_profits|safe }},
+                backgroundColor: {{ chart_data.stock_colors|safe }},
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₦' + value.toFixed(2);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Profit: ₦${context.parsed.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Monthly Trend Chart
+    const trendCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+    const trendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.monthly_labels|safe }},
+            datasets: [{
+                label: 'Monthly Profit',
+                data: {{ chart_data.monthly_profits|safe }},
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₦' + value.toFixed(2);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Profit: ₦${context.parsed.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Revenue vs Cost Chart
+    const revenueCostCtx = document.getElementById('revenueCostChart').getContext('2d');
+    const revenueCostChart = new Chart(revenueCostCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_data.monthly_labels|safe }},
+            datasets: [{
+                label: 'Revenue',
+                data: {{ chart_data.monthly_revenues|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Cost',
+                data: {{ chart_data.monthly_profits|safe }}.map((profit, i) => 
+                    {{ chart_data.monthly_revenues|safe }}[i] - profit),
+                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₦' + value.toFixed(2);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ₦${context.parsed.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
 {% endif %}
 {% endblock %}

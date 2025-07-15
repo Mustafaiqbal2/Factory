@@ -10,22 +10,124 @@
             <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back to Reports
             </a>
+            {% if stock_sales %}
+            <a href="{{ url_for('reports.export_sales_by_stock_pdf') }}?group_by={{ group_by }}" 
+               class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-pdf"></i> Export PDF
+            </a>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<div class="card">
+<!-- Grouping Options -->
+<div class="card mb-4">
     <div class="card-header">
-        <h5 class="card-title mb-0">Stock Performance Analysis</h5>
+        <h5 class="card-title mb-0">Group Sales By</h5>
     </div>
     <div class="card-body">
-        {% if stock_sales %}
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('reports.sales_by_stock') }}?group_by=item" 
+               class="btn {% if group_by == 'item' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="bi bi-grid"></i> Stock Item
+            </a>
+            <a href="{{ url_for('reports.sales_by_stock') }}?group_by=size" 
+               class="btn {% if group_by == 'size' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="bi bi-rulers"></i> Size
+            </a>
+            <a href="{{ url_for('reports.sales_by_stock') }}?group_by=color" 
+               class="btn {% if group_by == 'color' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="bi bi-palette"></i> Color
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if stock_sales %}
+<!-- Charts Section -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart"></i> Revenue Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="revenueChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart"></i> Sales Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="salesChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-primary">{{ stock_sales|length }}</h5>
+                <small class="text-muted">Total Groups</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-success">{{ stock_sales.values()|sum(attribute='total_quantity_sold') }}</h5>
+                <small class="text-muted">Units Sold</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-warning">{{ stock_sales.values()|sum(attribute='total_quantity_refunded') }}</h5>
+                <small class="text-muted">Units Refunded</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-info"><span class="currency">{{ "%.2f"|format(stock_sales.values()|sum(attribute='total_sales_amount') - stock_sales.values()|sum(attribute='total_refund_amount')) }}</span></h5>
+                <small class="text-muted">Net Revenue</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-table"></i> Detailed Analysis - Grouped by {{ group_by.title() }}
+        </h5>
+    </div>
+    <div class="card-body">
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
+                        {% if group_by == 'item' %}
                         <th>Size</th>
                         <th>Color</th>
+                        {% elif group_by == 'size' %}
+                        <th>Size</th>
+                        {% elif group_by == 'color' %}
+                        <th>Color</th>
+                        {% endif %}
                         <th>Qty Sold</th>
                         <th>Qty Refunded</th>
                         <th>Net Qty</th>
@@ -33,19 +135,30 @@
                         <th>Refund Amount</th>
                         <th>Net Revenue</th>
                         <th>Transactions</th>
+                        <th>Performance</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for stock_id, data in stock_sales.items() %}
+                    {% set net_qty = data.total_quantity_sold - data.total_quantity_refunded %}
+                    {% set net_revenue = data.total_sales_amount - data.total_refund_amount %}
                     <tr>
+                        {% if group_by == 'item' %}
+                        <td><strong>{{ data.stock_item.size }}</strong></td>
                         <td>
-                            <strong>{{ data.stock_item.size }}</strong>
-                        </td>
-                        <td>
-                            <span class="badge" style="background-color: {% if data.stock_item.color.lower() == 'red' %}#dc3545{% elif data.stock_item.color.lower() == 'blue' %}#0d6efd{% elif data.stock_item.color.lower() == 'black' %}#000{% else %}#6c757d{% endif %}; color: white;">
+                            <span class="badge" style="background-color: {% if data.stock_item.color.lower() == 'red' %}#dc3545{% elif data.stock_item.color.lower() == 'blue' %}#0d6efd{% elif data.stock_item.color.lower() == 'black' %}#000{% elif data.stock_item.color.lower() == 'white' %}#6c757d{% else %}#6c757d{% endif %}; color: white;">
                                 {{ data.stock_item.color }}
                             </span>
                         </td>
+                        {% elif group_by == 'size' %}
+                        <td><strong>{{ data.group_name }}</strong></td>
+                        {% elif group_by == 'color' %}
+                        <td>
+                            <span class="badge" style="background-color: {% if data.group_name.lower() == 'red' %}#dc3545{% elif data.group_name.lower() == 'blue' %}#0d6efd{% elif data.group_name.lower() == 'black' %}#000{% elif data.group_name.lower() == 'white' %}#6c757d{% else %}#6c757d{% endif %}; color: white;">
+                                {{ data.group_name }}
+                            </span>
+                        </td>
+                        {% endif %}
                         <td>
                             <span class="badge bg-success">{{ data.total_quantity_sold }}</span>
                         </td>
@@ -53,12 +166,16 @@
                             <span class="badge bg-warning text-dark">{{ data.total_quantity_refunded }}</span>
                         </td>
                         <td>
-                            <strong>{{ data.total_quantity_sold - data.total_quantity_refunded }}</strong>
+                            <strong class="{% if net_qty > 0 %}text-success{% elif net_qty < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                {{ net_qty }}
+                            </strong>
                         </td>
                         <td><span class="currency">{{ "%.2f"|format(data.total_sales_amount) }}</span></td>
                         <td><span class="currency">{{ "%.2f"|format(data.total_refund_amount) }}</span></td>
                         <td>
-                            <strong><span class="currency">{{ "%.2f"|format(data.total_sales_amount - data.total_refund_amount) }}</span></strong>
+                            <strong class="{% if net_revenue > 0 %}text-success{% elif net_revenue < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                <span class="currency">{{ "%.2f"|format(net_revenue) }}</span>
+                            </strong>
                         </td>
                         <td>
                             <small>
@@ -66,33 +183,134 @@
                                 {% if data.refund_count %}, {{ data.refund_count }} refunds{% endif %}
                             </small>
                         </td>
+                        <td>
+                            {% if net_revenue > 0 %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-arrow-up"></i> Profitable
+                            </span>
+                            {% elif net_revenue < 0 %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-arrow-down"></i> Loss
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-dash"></i> Break Even
+                            </span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="table-info">
-                        <th colspan="2">Total</th>
+                        <th {% if group_by == 'item' %}colspan="2"{% endif %}>Total</th>
                         <th>{{ stock_sales.values()|sum(attribute='total_quantity_sold') }}</th>
                         <th>{{ stock_sales.values()|sum(attribute='total_quantity_refunded') }}</th>
                         <th>{{ stock_sales.values()|sum(attribute='total_quantity_sold') - stock_sales.values()|sum(attribute='total_quantity_refunded') }}</th>
                         <th><span class="currency">{{ "%.2f"|format(stock_sales.values()|sum(attribute='total_sales_amount')) }}</span></th>
                         <th><span class="currency">{{ "%.2f"|format(stock_sales.values()|sum(attribute='total_refund_amount')) }}</span></th>
                         <th><strong><span class="currency">{{ "%.2f"|format(stock_sales.values()|sum(attribute='total_sales_amount') - stock_sales.values()|sum(attribute='total_refund_amount')) }}</span></strong></th>
-                        <th>-</th>
+                        <th colspan="2">-</th>
                     </tr>
                 </tfoot>
             </table>
         </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-graph-down display-1 text-muted"></i>
-            <h3 class="mt-3">No Sales Data</h3>
-            <p class="text-muted">No sales have been recorded yet.</p>
-            <a href="{{ url_for('sale.add') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Record First Sale
-            </a>
-        </div>
-        {% endif %}
     </div>
 </div>
+
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-graph-down display-1 text-muted"></i>
+    <h3 class="mt-3">No Sales Data</h3>
+    <p class="text-muted">No sales have been recorded yet.</p>
+    <a href="{{ url_for('sale.add') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Record First Sale
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if stock_sales and chart_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Revenue Pie Chart
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    const revenueChart = new Chart(revenueCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ chart_data.labels|safe }},
+            datasets: [{
+                data: {{ chart_data.values|safe }},
+                backgroundColor: {{ chart_data.colors|safe }},
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ₦${value.toFixed(2)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Sales Bar Chart
+    const salesCtx = document.getElementById('salesChart').getContext('2d');
+    const salesChart = new Chart(salesCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_data.labels|safe }},
+            datasets: [{
+                label: 'Net Revenue',
+                data: {{ chart_data.values|safe }},
+                backgroundColor: 'rgba(13, 110, 253, 0.8)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₦' + value.toFixed(2);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Revenue: ₦${context.parsed.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
 {% endblock %}
