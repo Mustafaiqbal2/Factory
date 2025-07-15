@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, make_response
-from app.routes.auth import login_required
-from app.database import get_db
+from application.routes.auth import login_required
+from application.database import get_db
 from playwright.sync_api import sync_playwright
 from datetime import datetime
 import json

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from app.database import get_db
-from app.routes.auth import login_required
+from application.database import get_db
+from application.routes.auth import login_required
 
 stock_bp = Blueprint('stock', __name__)
 

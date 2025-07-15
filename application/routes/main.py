@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template
-from app.database import get_db
-from app.routes.auth import login_required
+from application.database import get_db
+from application.routes.auth import login_required
 
 main_bp = Blueprint('main', __name__)
 

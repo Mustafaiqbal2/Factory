@@ -9,8 +9,8 @@ load_dotenv(override=True)
 def create_app():
     # Specify the template and static folders relative to the app.py file
     app = Flask(__name__, 
-                template_folder='app/templates',
-                static_folder='app/static')
+                template_folder='application/templates',
+                static_folder='application/static')
     
     # Production-ready configuration
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -24,13 +24,13 @@ def create_app():
         app.config['TESTING'] = False
     
     # Register blueprints
-    from app.routes.auth import auth_bp
-    from app.routes.stock import stock_bp
-    from app.routes.customer import customer_bp
-    from app.routes.sale import sale_bp
-    from app.routes.payment import payment_bp
-    from app.routes.reports import reports_bp
-    from app.routes.main import main_bp
+    from application.routes.auth import auth_bp
+    from application.routes.stock import stock_bp
+    from application.routes.customer import customer_bp
+    from application.routes.sale import sale_bp
+    from application.routes.payment import payment_bp
+    from application.routes.reports import reports_bp
+    from application.routes.main import main_bp
     
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(main_bp)

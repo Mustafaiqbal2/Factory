@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from app.routes.auth import login_required
-from app.database import get_db
+from application.routes.auth import login_required
+from application.database import get_db
 
 customer_bp = Blueprint('customer', __name__)
 
