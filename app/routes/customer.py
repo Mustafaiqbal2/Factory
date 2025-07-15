@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+from app.routes.auth import login_required
 from app.database import get_db
 
 customer_bp = Blueprint('customer', __name__)
 
 @customer_bp.route('/')
+@login_required
 def index():
     try:
         supabase = get_db()
@@ -27,6 +29,7 @@ def index():
         return render_template('customer/index.html', customers=[], search_query='')
 
 @customer_bp.route('/add', methods=['GET', 'POST'])
+@login_required
 def add():
     if request.method == 'POST':
         try:
@@ -46,6 +49,7 @@ def add():
     return render_template('customer/add.html')
 
 @customer_bp.route('/edit/<name>/<phone>', methods=['GET', 'POST'])
+@login_required
 def edit(name, phone):
     try:
         supabase = get_db()
@@ -72,6 +76,7 @@ def edit(name, phone):
         return redirect(url_for('customer.index'))
 
 @customer_bp.route('/delete/<name>/<phone>', methods=['POST'])
+@login_required
 def delete(name, phone):
     try:
         supabase = get_db()
@@ -83,6 +88,7 @@ def delete(name, phone):
     return redirect(url_for('customer.index'))
 
 @customer_bp.route('/view/<name>/<phone>')
+@login_required
 def view(name, phone):
     try:
         supabase = get_db()

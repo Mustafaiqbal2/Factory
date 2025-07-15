@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template
 from app.database import get_db
+from app.routes.auth import login_required
 
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
+@login_required
 def index():
     try:
         supabase = get_db()

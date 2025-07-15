@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.database import get_db
+from app.routes.auth import login_required
 
 stock_bp = Blueprint('stock', __name__)
 
 @stock_bp.route('/')
+@login_required
 def index():
     try:
         supabase = get_db()
@@ -14,6 +16,7 @@ def index():
         return render_template('stock/index.html', stock_items=[])
 
 @stock_bp.route('/add', methods=['GET', 'POST'])
+@login_required
 def add():
     if request.method == 'POST':
         try:
@@ -63,6 +66,7 @@ def add():
     return render_template('stock/add.html')
 
 @stock_bp.route('/edit/<size>/<color>', methods=['GET', 'POST'])
+@login_required
 def edit(size, color):
     try:
         supabase = get_db()
@@ -95,6 +99,7 @@ def edit(size, color):
         return redirect(url_for('stock.index'))
 
 @stock_bp.route('/delete/<size>/<color>', methods=['POST'])
+@login_required
 def delete(size, color):
     try:
         supabase = get_db()

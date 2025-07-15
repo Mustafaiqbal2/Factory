@@ -1,10 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, make_response
+from app.routes.auth import login_required
 from app.database import get_db
 from playwright.sync_api import sync_playwright
 from datetime import datetime
 import json
-import tempfile
-import os
+
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -35,10 +35,12 @@ def html_to_pdf(html_content, filename):
         return pdf_bytes
 
 @reports_bp.route('/')
+@login_required
 def index():
     return render_template('reports/index.html')
 
 @reports_bp.route('/account')
+@login_required
 def account_report():
     try:
         supabase = get_db()
@@ -85,6 +87,7 @@ def account_report():
         return render_template('reports/account.html', customers=[], account_data=None)
 
 @reports_bp.route('/sales_by_stock')
+@login_required
 def sales_by_stock():
     try:
         supabase = get_db()
@@ -203,6 +206,7 @@ def sales_by_stock():
                              })
 
 @reports_bp.route('/sales_by_customer')
+@login_required
 def sales_by_customer():
     try:
         supabase = get_db()
@@ -320,6 +324,7 @@ def sales_by_customer():
                              })
                 
 @reports_bp.route('/profit')
+@login_required
 def profit_report():
     try:
         supabase = get_db()
@@ -463,6 +468,7 @@ def profit_report():
 
 # PDF Export Routes using Playwright - USES YOUR EXACT EXISTING TEMPLATES
 @reports_bp.route('/export/account_pdf')
+@login_required
 def export_account_pdf():
     try:
         customer_name = request.args.get('customer')
@@ -517,6 +523,7 @@ def export_account_pdf():
         return redirect(url_for('reports.account_report'))
 
 @reports_bp.route('/export/sales_by_customer_pdf')
+@login_required
 def export_sales_by_customer_pdf():
     try:
         sort_by = request.args.get('sort_by', 'revenue')
@@ -615,6 +622,7 @@ def export_sales_by_customer_pdf():
         return redirect(url_for('reports.sales_by_customer'))
 
 @reports_bp.route('/export/sales_by_stock_pdf')
+@login_required
 def export_sales_by_stock_pdf():
     try:
         group_by = request.args.get('group_by', 'item')
@@ -711,6 +719,7 @@ def export_sales_by_stock_pdf():
         return redirect(url_for('reports.sales_by_stock'))
 
 @reports_bp.route('/export/profit_pdf')
+@login_required
 def export_profit_pdf():
     try:
         # Copy EXACT logic from profit_report route

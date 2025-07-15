@@ -1,10 +1,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+from app.routes.auth import login_required
 from app.database import get_db
 from datetime import datetime
 
 sale_bp = Blueprint('sale', __name__)
 
 @sale_bp.route('/')
+@login_required
 def index():
     try:
         supabase = get_db()
@@ -42,6 +44,7 @@ def index():
         return render_template('sale/index.html', sales=[])
 
 @sale_bp.route('/add', methods=['GET', 'POST'])
+@login_required
 def add():
     try:
         supabase = get_db()
@@ -137,6 +140,7 @@ def add():
         return redirect(url_for('sale.index'))
 
 @sale_bp.route('/refund/<int:sale_id>', methods=['POST'])
+@login_required
 def refund(sale_id):
     try:
         supabase = get_db()
@@ -198,6 +202,7 @@ def refund(sale_id):
     return redirect(url_for('sale.index'))
 
 @sale_bp.route('/delete/<int:sale_id>', methods=['POST'])
+@login_required
 def delete(sale_id):
     try:
         supabase = get_db()

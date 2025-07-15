@@ -1,6 +1,7 @@
 from flask import Flask
 from dotenv import load_dotenv
 import os
+from datetime import timedelta
 
 # Load environment variables
 load_dotenv(override=True)
@@ -13,7 +14,11 @@ def create_app():
     
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     
+    # Session configuration
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hours
+    
     # Register blueprints
+    from app.routes.auth import auth_bp
     from app.routes.stock import stock_bp
     from app.routes.customer import customer_bp
     from app.routes.sale import sale_bp
@@ -21,6 +26,7 @@ def create_app():
     from app.routes.reports import reports_bp
     from app.routes.main import main_bp
     
+    app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(main_bp)
     app.register_blueprint(stock_bp, url_prefix='/stock')
     app.register_blueprint(customer_bp, url_prefix='/customer')
